@@ -13,27 +13,24 @@
             color: #4a5568;
         }
         
-        /* 1. แก้ไข Ambient BG ลดภาระ GPU */
         .ambient-bg {
             position: absolute;
             inset: 0;
             z-index: 0;
             opacity: 0.35; 
             filter: blur(40px) saturate(150%); 
-            transform: scale(1.2) translateZ(0); /* ใช้ translateZ เพื่อบังคับใช้ Hardware Acceleration */
-            will-change: opacity; /* บอกเบราว์เซอร์ล่วงหน้าว่าจะเปลี่ยนแค่ความสว่าง (ไม่ให้ขยับแล้ว) */
+            transform: scale(1.2) translateZ(0); 
+            will-change: opacity; 
             transition: opacity 0.4s ease-out; 
             pointer-events: none;
         }
         
         .app-card {
             background: rgba(255, 255, 255, 0.75);
-            /* ลดค่า blur ลงเล็กน้อยเพื่อความลื่นไหล */
             backdrop-filter: blur(6px); 
             -webkit-backdrop-filter: blur(6px);
             border: 1px solid rgba(255, 255, 255, 0.8);
             box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.05);
-            /* ระบุ Property ที่จะ Animate ให้ชัดเจน ห้ามใช้ all */
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
                         box-shadow 0.4s ease, 
                         background-color 0.4s ease,
@@ -49,7 +46,6 @@
             border-color: #fff;
         }
         
-        /* 2. เปลี่ยนจากการขยายขนาด เป็นแค่เพิ่มความสว่าง (ประหยัดสเปคเครื่องกว่า 80%) */
         .app-card:hover .ambient-bg {
             opacity: 0.7; 
         }
@@ -63,7 +59,6 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
 
-        /* 3. Modal Transitions - ระบุเจาะจง ไม่ใช้ all และเพิ่มความสมูทแบบเด้งๆ (Bouncy) */
         .modal-overlay {
             background-color: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(5px);
@@ -77,13 +72,12 @@
         }
         .modal-content {
             transform: translateY(30px) scale(0.95);
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* เอฟเฟกต์เด้งดึ๋งนุ่มๆ */
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); 
         }
         .modal-overlay.active .modal-content {
             transform: translateY(0) scale(1);
         }
 
-        /* Loader */
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #f472b6;
@@ -189,13 +183,13 @@
             </div>
             
             <div class="p-6 md:p-8 overflow-y-auto flex-1 flex flex-col lg:flex-row gap-8 relative">
-                <!-- Data Sync Overlay (Shows when saving/deleting) -->
+                <!-- Data Sync Overlay -->
                 <div id="syncOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden rounded-b-3xl">
                     <div class="loader mb-3"></div>
                     <p class="text-pink-500 font-bold text-sm tracking-widest uppercase">กำลังซิงค์ข้อมูลกับ Sheets...</p>
                 </div>
 
-                <!-- Add New App Form -->
+                <!-- Add/Edit App Form -->
                 <div class="flex-1">
                     <h3 id="formTitle" class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
                     <form id="addAppForm" onsubmit="saveNewApp(event)" class="space-y-4">
@@ -269,7 +263,7 @@
 
     <script>
         // ==========================================
-        // นำ URL เว็บแอป (ที่ได้จาก Google Apps Script) มาวางในเครื่องหมายคำพูดด้านล่างนี้
+        // URL เว็บแอปของคุณ (ใส่เรียบร้อยแล้ว)
         // ==========================================
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBdhtZVjNcq6V2NF8IXfreXblx1TLz4CuKisVDjzZxW9MM4cjwU6buY3RWzrhbLsPh/exec'; 
         
@@ -277,13 +271,9 @@
         
         let allApps = [];
         let activeCategory = 'ทั้งหมด';
-        let editingAppId = null; // ตัวแปรสำหรับเช็คว่ากำลังแก้ไขแอปไหนอยู่
+        let editingAppId = null; 
 
         window.onload = () => {
-            if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'ใส่_URL_ของคุนที่นี่') {
-                document.getElementById('mainLoading').innerHTML = `<p class="text-red-500 font-bold">กรุณาตั้งค่า GOOGLE_SCRIPT_URL ในโค้ดก่อนครับ</p>`;
-                return;
-            }
             fetchDataFromCloud();
         };
 
@@ -293,8 +283,18 @@
                 const response = await fetch(GOOGLE_SCRIPT_URL);
                 const data = await response.json();
                 
-                // แปลงข้อมูลที่ได้ให้เป็นรูปแบบที่เราใช้
-                allApps = data.filter(app => app.Name); // กรองแถวว่างทิ้ง
+                // แก้บัค: แปลงข้อมูลทุกอย่างให้เป็นตัวอักษร (String) 
+                // ป้องกัน Google Sheets ส่งตัวเลขหรือค่าว่างกลับมาแล้วทำให้ระบบพัง
+                allApps = data.map(app => {
+                    return {
+                        id: String(app.id || ''),
+                        Name: String(app.Name || ''),
+                        Description: String(app.Description || ''),
+                        Link: String(app.Link || ''),
+                        Category: String(app.Category || ''),
+                        IconURL: String(app.IconURL || '')
+                    };
+                }).filter(app => app.Name.trim() !== ''); // กรองแถวว่างทิ้ง
                 
                 document.getElementById('mainLoading').classList.add('hidden');
                 refreshUI();
@@ -311,7 +311,6 @@
             renderAdminList();
         }
 
-        // --- Main UI Rendering ---
         function renderCategories() {
             const categories = ['ทั้งหมด', ...new Set(allApps.map(app => app.Category).filter(Boolean))];
             const bar = document.getElementById('categoryBar');
@@ -337,13 +336,13 @@
             empty.classList.add('hidden');
 
             grid.innerHTML = apps.map(app => {
-                // จัดการลิงก์ให้ถูกต้อง ป้องกันปัญหาพิมพ์แค่ www หรือไม่ได้ใส่ลิงก์
+                // แก้บัคลิงก์พัง: ป้องกันข้อผิดพลาดกรณีพิมพ์ลิงก์มาไม่ครบ
                 let safeLink = app.Link ? app.Link.trim() : '#';
-                if (safeLink !== '#' && !safeLink.startsWith('http') && !safeLink.startsWith('mailto:')) {
-                    safeLink = 'https://' + safeLink; // เติม https:// ให้อัตโนมัติถ้าลืม
+                if (safeLink !== '#' && safeLink !== '' && !safeLink.startsWith('http') && !safeLink.startsWith('mailto:')) {
+                    safeLink = 'https://' + safeLink; 
                 }
+                if (safeLink === '') safeLink = '#';
                 
-                // ถ้ามีลิงก์ให้เปิดแท็บใหม่ ถ้าไม่มีไม่ต้องเปิดแท็บใหม่
                 const targetAttr = safeLink !== '#' ? 'target="_blank"' : '';
 
                 return `
@@ -360,15 +359,15 @@
                                 <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white/90 flex items-center justify-center border border-white/50 shadow-sm group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 ease-out overflow-hidden shrink-0 will-change-transform">
                                     ${app.IconURL 
                                         ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=ffd6e0&color=fff&size=128'">` 
-                                        : `<div class="text-pink-300 font-bold text-4xl md:text-5xl select-none">${app.Name ? app.Name.charAt(0) : '?'}</div>`
+                                        : `<div class="text-pink-300 font-bold text-4xl md:text-5xl select-none">${app.Name.charAt(0)}</div>`
                                     }
                                 </div>
                                 <span class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-xl mt-1 border border-white">${app.Category || 'General'}</span>
                             </div>
-                            <h3 class="font-bold text-gray-800 text-xl group-hover:text-pink-500 transition-colors uppercase tracking-tight break-words leading-tight pl-1 drop-shadow-sm">${app.Name || 'Untitled'}</h3>
+                            <h3 class="font-bold text-gray-800 text-xl group-hover:text-pink-500 transition-colors uppercase tracking-tight break-words leading-tight pl-1 drop-shadow-sm">${app.Name}</h3>
                         </div>
                         <div class="flex-grow pl-1">
-                            <p class="text-sm text-gray-600 leading-relaxed mb-6 font-medium break-words drop-shadow-sm">${app.Description || ''}</p>
+                            <p class="text-sm text-gray-600 leading-relaxed mb-6 font-medium break-words drop-shadow-sm">${app.Description}</p>
                         </div>
                         <div class="mt-auto pt-4 border-t border-gray-200/50 flex items-center justify-center text-xs font-black uppercase tracking-[0.25em] text-gray-400 group-hover:text-pink-500 transition-all">
                             <span>Open App</span>
@@ -395,7 +394,6 @@
             refreshUI();
         }
 
-        // --- Admin & Modal Logic ---
         function openPasswordModal() {
             document.getElementById('passwordModal').classList.add('active');
             document.getElementById('adminPassword').value = '';
@@ -458,7 +456,6 @@
                 return;
             }
 
-            // แสดงรายการล่าสุดขึ้นก่อน (Reverse order)
             list.innerHTML = [...allApps].reverse().map(app => `
                 <div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-md transition-shadow">
                     <div class="flex items-center gap-3 overflow-hidden">
@@ -471,11 +468,9 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
-                        <!-- ปุ่มแก้ไข -->
                         <button type="button" onclick="editApp('${app.id}')" class="text-blue-400 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="แก้ไข">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        <!-- ปุ่มลบ -->
                         <button type="button" onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition-colors" title="ลบ">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                         </button>
@@ -486,41 +481,35 @@
 
         // --- เตรียมข้อมูลสำหรับแก้ไข ---
         function editApp(id) {
-            const app = allApps.find(a => a.id === id);
+            // มั่นใจว่า id ทั้งสองฝั่งเป็น String ตอนตรวจสอบ
+            const app = allApps.find(a => String(a.id) === String(id));
             if(!app) return;
             
-            editingAppId = id; // ตั้งสถานะว่ากำลังแก้ไข
+            editingAppId = id; 
             
-            // เปลี่ยนหน้าตาฟอร์มให้เป็นโหมดแก้ไข
             document.getElementById('formTitle').innerText = '✏️ แก้ไขแอปพลิเคชัน';
             document.getElementById('submitBtn').innerHTML = '💾 บันทึกการแก้ไข';
             document.getElementById('submitBtn').className = 'flex-1 w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
             document.getElementById('cancelEditBtn').classList.remove('hidden');
 
-            // ดึงข้อมูลเดิมมาใส่ในฟอร์ม
             document.getElementById('appName').value = app.Name || '';
             document.getElementById('appDesc').value = app.Description || '';
             document.getElementById('appLink').value = app.Link || '';
             document.getElementById('appCategory').value = app.Category || '';
             
-            // จัดการรูปภาพ
             if(app.IconURL && app.IconURL.startsWith('data:image')) {
-                // ถ้าเป็นรูปอัปโหลด จะไม่สามารถใส่ค่าคืนไปที่ input file ได้ ให้เลือกโหมดอัปโหลดรอไว้
                 document.querySelector('input[name="iconType"][value="upload"]').checked = true;
                 toggleIconInput();
             } else {
-                // ถ้าเป็น URL
                 document.querySelector('input[name="iconType"][value="url"]').checked = true;
                 toggleIconInput();
                 document.getElementById('appIconUrl').value = app.IconURL || '';
             }
         }
 
-        // --- ยกเลิกการแก้ไข ---
         function cancelEdit() {
-            editingAppId = null; // คืนค่าสถานะ
+            editingAppId = null; 
             
-            // คืนค่าหน้าตาฟอร์มเป็นโหมดเพิ่มข้อมูล
             document.getElementById('formTitle').innerText = 'เพิ่มแอปพลิเคชันใหม่';
             document.getElementById('submitBtn').innerHTML = '+ บันทึกข้อมูลขึ้น Cloud';
             document.getElementById('submitBtn').className = 'flex-1 w-full bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
@@ -531,7 +520,6 @@
             toggleIconInput();
         }
 
-        // --- Post Data to Cloud (ใช้ได้ทั้ง Add และ Edit) ---
         async function saveNewApp(e) {
             e.preventDefault();
             
@@ -552,18 +540,16 @@
                     if (fileInput.files.length > 0) {
                         iconURL = await resizeAndConvertToBase64(fileInput.files[0]);
                     } else if (editingAppId) {
-                        // กรณีแก้ไข แต่ไม่ได้อัปโหลดรูปใหม่ ให้ใช้รูปเดิม
-                        const oldApp = allApps.find(a => a.id === editingAppId);
+                        const oldApp = allApps.find(a => String(a.id) === String(editingAppId));
                         iconURL = oldApp ? (oldApp.IconURL || '') : '';
                     }
                 }
 
-                // ตรวจสอบว่าเป็นการแก้ไขหรือเพิ่มใหม่
                 const targetId = editingAppId ? editingAppId : Date.now().toString();
                 const actionType = editingAppId ? 'edit' : 'add';
 
                 const appData = {
-                    id: targetId,
+                    id: String(targetId),
                     Name: name,
                     Description: desc,
                     Link: link,
@@ -581,16 +567,15 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
 
-                // อัปเดตในเครื่องทันที
                 if (editingAppId) {
-                    const index = allApps.findIndex(a => a.id === editingAppId);
+                    const index = allApps.findIndex(a => String(a.id) === String(editingAppId));
                     if(index !== -1) allApps[index] = appData;
                 } else {
                     allApps.push(appData);
                 }
                 
                 refreshUI();
-                cancelEdit(); // ล้างฟอร์มและรีเซ็ตสถานะ
+                cancelEdit(); 
                 
                 document.getElementById('syncOverlay').classList.add('hidden');
                 showAlert('success', 'ซิงค์ข้อมูลสำเร็จ!', editingAppId ? 'แก้ไขข้อมูลเรียบร้อยแล้ว' : 'เพิ่มแอปพลิเคชันลงใน Sheet เรียบร้อยแล้ว');
@@ -615,7 +600,7 @@
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                     });
 
-                    allApps = allApps.filter(app => app.id !== id);
+                    allApps = allApps.filter(app => String(app.id) !== String(id));
                     refreshUI();
                     document.getElementById('syncOverlay').classList.add('hidden');
                 } catch (error) {
@@ -625,8 +610,6 @@
             }
         }
 
-        // --- Helper: Resize Image ---
-        // (ยังคงจำกัดขนาดให้เล็กมากๆ เพื่อไม่ให้ Google Sheet เออเร่อข้อความยาวเกินไป)
         function resizeAndConvertToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -636,7 +619,7 @@
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_SIZE = 120; // จำกัดขนาดให้เล็กมากๆ สำหรับเก็บใน Sheet cell
+                        const MAX_SIZE = 120; 
                         let width = img.width;
                         let height = img.height;
 
@@ -655,7 +638,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // บีบอัดเยอะๆ
+                        resolve(canvas.toDataURL('image/jpeg', 0.6)); 
                     };
                     img.onerror = (err) => reject(err);
                 };

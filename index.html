@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Hub Portal - Pastel Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #fdfbf7; 
+            color: #4a5568;
+        }
+        
+        .ambient-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            opacity: 0.4; 
+            filter: blur(40px) saturate(160%); 
+            transform: scale(1.2) translate3d(0,0,0); 
+            will-change: opacity, transform; 
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out; 
+            pointer-events: none;
+        }
+        
+        .app-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease, background-color 0.3s ease;
+            transform: translate3d(0,0,0); 
+            will-change: transform;
+        }
+        
+        .app-card:hover { 
+            transform: translateY(-6px) translate3d(0,0,0);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.08);
+            border-color: #fff;
+        }
+        
+        .app-card:hover .ambient-bg {
+            opacity: 0.65; 
+            transform: scale(1.4) translate3d(0,0,0); 
+        }
+
+        .cat-btn-active { background-color: #1a202c; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .cat-btn-inactive { background-color: white; color: #718096; border: 1px solid #e2e8f0; }
+        .cat-btn-inactive:hover { background-color: #f7fafc; color: #4a5568; border-color: #cbd5e0; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #fdfbf7; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+
+        /* Modal Transitions */
+        .modal-overlay {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #f472b6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen relative">
+
+    <div id="app" class="max-w-7xl mx-auto px-4 md:px-6 py-10">
+        <!-- Header -->
+        <header class="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-12 border-b border-gray-200 pb-12">
+            <div class="flex items-center gap-6 md:gap-8">
+                <div class="w-20 h-20 md:w-28 md:h-28 bg-white rounded-3xl flex items-center justify-center shadow-xl overflow-hidden border-4 border-white group shrink-0 relative hover:scale-105 transition-transform duration-500 will-change-transform">
+                    <img id="storeLogo" src="https://i.postimg.cc/KY2KcC5g/New-folder-9.jpg" alt="Store Logo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="flex-1">
+                    <h1 class="text-3xl md:text-5xl font-bold text-gray-800 tracking-tight uppercase italic mb-1">App <span class="text-pink-400">Directory</span></h1>
+                    <p class="text-gray-400 text-xs md:text-base tracking-[0.2em] font-light">PASTEL COLLECTION & TOOLS</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4 w-full xl:w-auto items-stretch md:items-center">
+                <!-- Search Input -->
+                <div class="relative w-full md:w-80 lg:w-96">
+                    <input type="text" id="searchInput" onkeyup="filterApps()" 
+                           placeholder="ค้นหาแอปน่ารักๆ..." 
+                           class="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-gray-200 text-gray-600 placeholder-gray-400 focus:ring-2 focus:ring-pink-200 focus:border-pink-300 outline-none transition-all text-lg shadow-sm">
+                    <span class="absolute left-4 top-5 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </span>
+                </div>
+
+                <!-- Admin Button -->
+                <button onclick="openPasswordModal()" 
+                    class="flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-pink-500 hover:border-pink-200 hover:shadow-lg hover:shadow-pink-100 transition-all group whitespace-nowrap shadow-sm cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                    <span class="text-sm font-bold uppercase tracking-wider">Manage Data</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Category Bar -->
+        <div id="categoryBar" class="flex flex-wrap gap-3 md:gap-4 mb-10"></div>
+
+        <!-- Initial Loading State -->
+        <div id="mainLoading" class="flex flex-col items-center justify-center py-20">
+            <div class="loader mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
+            <p class="text-gray-400 uppercase tracking-widest text-sm font-bold">กำลังดึงข้อมูลจาก Cloud...</p>
+        </div>
+
+        <!-- App Grid -->
+        <div id="appGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10 pb-20 hidden"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-32 bg-white/50 rounded-3xl border border-dashed border-gray-300">
+            <p class="text-gray-400 uppercase tracking-widest text-lg">No apps found</p>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-12 border-t border-gray-200 text-center pb-8">
+            <p class="text-gray-400 text-xs uppercase tracking-[0.3em]">© 2026 Crafted with Love • Connected to Google Sheets</p>
+        </footer>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div class="modal-content bg-white p-8 rounded-3xl shadow-2xl border border-pink-100 max-w-sm w-full relative">
+            <button onclick="closeModals()" class="absolute top-4 right-4 text-gray-400 hover:text-pink-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div class="w-16 h-16 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-pink-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">Admin Access</h2>
+            <p class="text-center text-gray-500 text-sm mb-6">กรุณาใส่รหัสผ่านเพื่อจัดการแอปพลิเคชัน</p>
+            <input type="password" id="adminPassword" placeholder="รหัสผ่าน..." class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 focus:outline-none text-center text-lg tracking-widest mb-4">
+            <p id="passwordError" class="text-red-400 text-sm text-center hidden mb-4">รหัสผ่านไม่ถูกต้อง!</p>
+            <button onclick="checkPassword()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm">Login</button>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="adminModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4 py-10 overflow-y-auto">
+        <div class="modal-content bg-white rounded-3xl shadow-2xl border border-pink-100 max-w-4xl w-full my-auto flex flex-col max-h-full">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Manage Data
+                </h2>
+                <button onclick="closeModals()" class="p-2 bg-white rounded-full hover:bg-pink-50 text-gray-400 hover:text-pink-500 transition-colors shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 md:p-8 overflow-y-auto flex-1 flex flex-col lg:flex-row gap-8 relative">
+                <!-- Data Sync Overlay (Shows when saving/deleting) -->
+                <div id="syncOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden rounded-b-3xl">
+                    <div class="loader mb-3"></div>
+                    <p class="text-pink-500 font-bold text-sm tracking-widest uppercase">กำลังซิงค์ข้อมูลกับ Sheets...</p>
+                </div>
+
+                <!-- Add New App Form -->
+                <div class="flex-1">
+                    <h3 class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
+                    <form id="addAppForm" onsubmit="saveNewApp(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อ App</label>
+                            <input type="text" id="appName" required class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">รายละเอียด (Description)</label>
+                            <textarea id="appDesc" rows="2" class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ลิงก์ URL</label>
+                            <input type="url" id="appLink" required class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หมวดหมู่ (พิมพ์เพื่อสร้างใหม่ หรือเลือกจากรายการ)</label>
+                            <input list="categoryList" id="appCategory" required autocomplete="off" class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                            <datalist id="categoryList"></datalist>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-3">ไอคอน (Icon)</label>
+                            <div class="flex gap-4 mb-3">
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="radio" name="iconType" value="url" checked onchange="toggleIconInput()" class="text-pink-500 focus:ring-pink-400"> วาง Link รูป
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="radio" name="iconType" value="upload" onchange="toggleIconInput()" class="text-pink-500 focus:ring-pink-400"> อัปโหลดรูป (จำกัดขนาด)
+                                </label>
+                            </div>
+                            <input type="url" id="appIconUrl" placeholder="https://..." class="w-full px-4 py-2 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                            <input type="file" id="appIconFile" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-600 hover:file:bg-pink-100 hidden">
+                            <p class="text-[10px] text-gray-400 mt-2">เพื่อไม่ให้ Sheet ทำงานหนักเกินไป แนะนำให้ใช้ Link รูปภาพแทนการอัปโหลดครับ</p>
+                        </div>
+
+                        <button type="submit" class="w-full bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg mt-4">
+                            + บันทึกข้อมูลขึ้น Cloud
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Existing Apps List -->
+                <div class="flex-1 flex flex-col h-[500px] lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-100 pt-6 lg:pt-0 lg:pl-8">
+                    <h3 class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2 flex justify-between items-center">
+                        รายการแอปที่มีอยู่ 
+                        <span id="appCount" class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">0</span>
+                    </h3>
+                    <div class="overflow-y-auto flex-1 pr-2 space-y-3" id="adminAppList">
+                        <!-- Admin list injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Message Modal -->
+    <div id="alertModal" class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center px-4 hidden">
+        <div class="modal-content bg-white p-6 rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full text-center">
+            <div id="alertIcon" class="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3"></div>
+            <h3 id="alertTitle" class="text-lg font-bold text-gray-800 mb-1"></h3>
+            <p id="alertMessage" class="text-gray-500 text-sm mb-5"></p>
+            <button onclick="document.getElementById('alertModal').classList.remove('active'); setTimeout(()=>document.getElementById('alertModal').classList.add('hidden'), 300)" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">ตกลง</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // นำ URL เว็บแอป (ที่ได้จาก Google Apps Script) มาวางในเครื่องหมายคำพูดด้านล่างนี้
+        // ==========================================
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBdhtZVjNcq6V2NF8IXfreXblx1TLz4CuKisVDjzZxW9MM4cjwU6buY3RWzrhbLsPh/exec'; 
+        
+        const ADMIN_PASSWORD = '03062534';
+        
+        let allApps = [];
+        let activeCategory = 'ทั้งหมด';
+
+        window.onload = () => {
+            if(GOOGLE_SCRIPT_URL === 'ใส่_URL_ของคุนที่นี่') {
+                document.getElementById('mainLoading').innerHTML = `<p class="text-red-500 font-bold">กรุณาตั้งค่า GOOGLE_SCRIPT_URL ในโค้ดก่อนครับ</p>`;
+                return;
+            }
+            fetchDataFromCloud();
+        };
+
+        // --- Fetch Data from Google Sheets ---
+        async function fetchDataFromCloud() {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const data = await response.json();
+                
+                // แปลงข้อมูลที่ได้ให้เป็นรูปแบบที่เราใช้
+                allApps = data.filter(app => app.Name); // กรองแถวว่างทิ้ง
+                
+                document.getElementById('mainLoading').classList.add('hidden');
+                refreshUI();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('mainLoading').innerHTML = `<p class="text-red-500 font-bold">ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่</p>`;
+            }
+        }
+
+        function refreshUI() {
+            renderCategories();
+            filterApps();
+            updateDatalist();
+            renderAdminList();
+        }
+
+        // --- Main UI Rendering ---
+        function renderCategories() {
+            const categories = ['ทั้งหมด', ...new Set(allApps.map(app => app.Category).filter(Boolean))];
+            const bar = document.getElementById('categoryBar');
+            bar.innerHTML = categories.map(cat => `
+                <button onclick="filterByCategory('${cat}')" 
+                        class="cat-btn px-6 md:px-8 py-3 rounded-2xl text-xs md:text-sm font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat ? 'cat-btn-active' : 'cat-btn-inactive'}">
+                    ${cat}
+                </button>
+            `).join('');
+        }
+
+        function renderApps(apps) {
+            const grid = document.getElementById('appGrid');
+            const empty = document.getElementById('emptyState');
+            
+            if (apps.length === 0) {
+                grid.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            grid.classList.remove('hidden');
+            empty.classList.add('hidden');
+
+            grid.innerHTML = apps.map(app => `
+                <a href="${app.Link}" target="_blank" class="app-card group p-6 rounded-3xl relative overflow-hidden h-full flex flex-col">
+                    <div class="ambient-bg">
+                        ${app.IconURL 
+                            ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">` 
+                            : `<div class="w-full h-full bg-gradient-to-br from-pink-200 to-blue-200"></div>`
+                        }
+                    </div>
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div class="flex flex-col gap-5 mb-4">
+                            <div class="flex items-start justify-between">
+                                <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white/90 flex items-center justify-center border border-white/50 shadow-sm group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 ease-out overflow-hidden shrink-0 will-change-transform">
+                                    ${app.IconURL 
+                                        ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=ffd6e0&color=fff&size=128'">` 
+                                        : `<div class="text-pink-300 font-bold text-4xl md:text-5xl select-none">${app.Name ? app.Name.charAt(0) : '?'}</div>`
+                                    }
+                                </div>
+                                <span class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-xl mt-1 border border-white">${app.Category || 'General'}</span>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-xl group-hover:text-pink-500 transition-colors uppercase tracking-tight break-words leading-tight pl-1 drop-shadow-sm">${app.Name || 'Untitled'}</h3>
+                        </div>
+                        <div class="flex-grow pl-1">
+                            <p class="text-sm text-gray-600 leading-relaxed mb-6 font-medium break-words drop-shadow-sm">${app.Description || ''}</p>
+                        </div>
+                        <div class="mt-auto pt-4 border-t border-gray-200/50 flex items-center justify-center text-xs font-black uppercase tracking-[0.25em] text-gray-400 group-hover:text-pink-500 transition-all">
+                            <span>Open App</span>
+                        </div>
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        function filterApps() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allApps.filter(app => {
+                const searchContent = (app.Name || '') + (app.Description || '') + (app.Category || '');
+                const matchesSearch = searchContent.toLowerCase().includes(term);
+                const matchesCat = activeCategory === 'ทั้งหมด' || app.Category === activeCategory;
+                return matchesSearch && matchesCat;
+            });
+            renderApps(filtered);
+        }
+
+        function filterByCategory(cat) {
+            activeCategory = cat;
+            refreshUI();
+        }
+
+        // --- Admin & Modal Logic ---
+        function openPasswordModal() {
+            document.getElementById('passwordModal').classList.add('active');
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('passwordError').classList.add('hidden');
+            document.getElementById('adminPassword').focus();
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
+        }
+
+        document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkPassword();
+        });
+
+        function checkPassword() {
+            const pwd = document.getElementById('adminPassword').value;
+            if (pwd === ADMIN_PASSWORD) {
+                document.getElementById('passwordModal').classList.remove('active');
+                setTimeout(() => {
+                    document.getElementById('adminModal').classList.add('active');
+                    updateDatalist();
+                    renderAdminList();
+                }, 300);
+            } else {
+                document.getElementById('passwordError').classList.remove('hidden');
+            }
+        }
+
+        function toggleIconInput() {
+            const type = document.querySelector('input[name="iconType"]:checked').value;
+            const urlInput = document.getElementById('appIconUrl');
+            const fileInput = document.getElementById('appIconFile');
+            
+            if (type === 'url') {
+                urlInput.classList.remove('hidden');
+                fileInput.classList.add('hidden');
+                urlInput.required = true;
+                fileInput.required = false;
+            } else {
+                urlInput.classList.add('hidden');
+                fileInput.classList.remove('hidden');
+                urlInput.required = false;
+                fileInput.required = true;
+            }
+        }
+
+        function updateDatalist() {
+            const categories = [...new Set(allApps.map(app => app.Category).filter(Boolean))];
+            const datalist = document.getElementById('categoryList');
+            datalist.innerHTML = categories.map(cat => `<option value="${cat}">`).join('');
+        }
+
+        function renderAdminList() {
+            const list = document.getElementById('adminAppList');
+            document.getElementById('appCount').innerText = allApps.length;
+            
+            if(allApps.length === 0) {
+                list.innerHTML = `<p class="text-center text-sm text-gray-400 py-10 border border-dashed rounded-xl">ยังไม่มีข้อมูลแอปพลิเคชัน</p>`;
+                return;
+            }
+
+            // แสดงรายการล่าสุดขึ้นก่อน (Reverse order)
+            list.innerHTML = [...allApps].reverse().map(app => `
+                <div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-10 h-10 rounded-lg bg-white shrink-0 overflow-hidden border border-gray-200">
+                            ${app.IconURL ? `<img src="${app.IconURL}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">${app.Name.charAt(0)}</div>`}
+                        </div>
+                        <div class="truncate">
+                            <p class="font-bold text-sm text-gray-800 truncate">${app.Name}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wider">${app.Category}</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition-colors shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+            `).join(''); 
+        }
+
+        // --- Post Data to Cloud ---
+        async function saveNewApp(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('appName').value.trim();
+            const desc = document.getElementById('appDesc').value.trim();
+            const link = document.getElementById('appLink').value.trim();
+            const category = document.getElementById('appCategory').value.trim();
+            const iconType = document.querySelector('input[name="iconType"]:checked').value;
+            
+            let iconURL = '';
+            document.getElementById('syncOverlay').classList.remove('hidden');
+
+            try {
+                if (iconType === 'url') {
+                    iconURL = document.getElementById('appIconUrl').value.trim();
+                } else {
+                    const fileInput = document.getElementById('appIconFile');
+                    if (fileInput.files.length > 0) {
+                        iconURL = await resizeAndConvertToBase64(fileInput.files[0]);
+                    }
+                }
+
+                const newApp = {
+                    id: Date.now().toString(),
+                    Name: name,
+                    Description: desc,
+                    Link: link,
+                    Category: category,
+                    IconURL: iconURL
+                };
+
+                // ส่งไปที่ Google Sheets (ใช้ URLSearchParams ป้องกันปัญหา CORS)
+                const formData = new URLSearchParams();
+                formData.append('action', 'add');
+                formData.append('data', JSON.stringify(newApp));
+
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+
+                // อัปเดตในเครื่องทันทีโดยไม่ต้องรอโหลดใหม่ทั้งหมด
+                allApps.push(newApp);
+                refreshUI();
+                
+                // รีเซ็ตฟอร์ม
+                document.getElementById('addAppForm').reset();
+                document.getElementById('appIconUrl').classList.remove('hidden');
+                document.getElementById('appIconFile').classList.add('hidden');
+                document.querySelector('input[name="iconType"][value="url"]').checked = true;
+                
+                document.getElementById('syncOverlay').classList.add('hidden');
+                showAlert('success', 'ซิงค์ข้อมูลสำเร็จ!', 'เพิ่มแอปพลิเคชันลงใน Sheet เรียบร้อยแล้ว');
+
+            } catch (error) {
+                document.getElementById('syncOverlay').classList.add('hidden');
+                showAlert('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถส่งข้อมูลไปที่ Sheet ได้: ' + error.message);
+            }
+        }
+
+        async function deleteApp(id) {
+            if(confirm('คุณแน่ใจหรือไม่ว่าต้องการลบแอปนี้ออกจากระบบ (ลบออกจาก Sheet ด้วย)?')) {
+                document.getElementById('syncOverlay').classList.remove('hidden');
+                try {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'delete');
+                    formData.append('id', id);
+
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+
+                    allApps = allApps.filter(app => app.id !== id);
+                    refreshUI();
+                    document.getElementById('syncOverlay').classList.add('hidden');
+                } catch (error) {
+                    document.getElementById('syncOverlay').classList.add('hidden');
+                    showAlert('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลจาก Sheet ได้');
+                }
+            }
+        }
+
+        // --- Helper: Resize Image ---
+        // (ยังคงจำกัดขนาดให้เล็กมากๆ เพื่อไม่ให้ Google Sheet เออเร่อข้อความยาวเกินไป)
+        function resizeAndConvertToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 120; // จำกัดขนาดให้เล็กมากๆ สำหรับเก็บใน Sheet cell
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // บีบอัดเยอะๆ
+                    };
+                    img.onerror = (err) => reject(err);
+                };
+                reader.onerror = (err) => reject(err);
+            });
+        }
+
+        function showAlert(type, title, message) {
+            const modal = document.getElementById('alertModal');
+            const iconWrap = document.getElementById('alertIcon');
+            
+            if (type === 'success') {
+                iconWrap.className = 'w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4 bg-green-100 text-green-500';
+                iconWrap.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+            } else {
+                iconWrap.className = 'w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-500';
+                iconWrap.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+            }
+            
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+    </script>
+</body>
+</html>

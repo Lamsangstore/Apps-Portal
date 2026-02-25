@@ -13,39 +13,45 @@
             color: #4a5568;
         }
         
+        /* 1. แก้ไข Ambient BG ลดภาระ GPU */
         .ambient-bg {
             position: absolute;
             inset: 0;
             z-index: 0;
-            opacity: 0.4; 
-            filter: blur(40px) saturate(160%); 
-            transform: scale(1.2) translate3d(0,0,0); 
-            will-change: opacity, transform; 
-            transition: opacity 0.4s ease-out, transform 0.4s ease-out; 
+            opacity: 0.35; 
+            filter: blur(40px) saturate(150%); 
+            transform: scale(1.2) translateZ(0); /* ใช้ translateZ เพื่อบังคับใช้ Hardware Acceleration */
+            will-change: opacity; /* บอกเบราว์เซอร์ล่วงหน้าว่าจะเปลี่ยนแค่ความสว่าง (ไม่ให้ขยับแล้ว) */
+            transition: opacity 0.4s ease-out; 
             pointer-events: none;
         }
         
         .app-card {
             background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
+            /* ลดค่า blur ลงเล็กน้อยเพื่อความลื่นไหล */
+            backdrop-filter: blur(6px); 
+            -webkit-backdrop-filter: blur(6px);
             border: 1px solid rgba(255, 255, 255, 0.8);
             box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease, background-color 0.3s ease;
-            transform: translate3d(0,0,0); 
+            /* ระบุ Property ที่จะ Animate ให้ชัดเจน ห้ามใช้ all */
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                        box-shadow 0.4s ease, 
+                        background-color 0.4s ease,
+                        border-color 0.4s ease;
+            transform: translateZ(0); 
             will-change: transform;
         }
         
         .app-card:hover { 
-            transform: translateY(-6px) translate3d(0,0,0);
-            background: rgba(255, 255, 255, 0.92);
+            transform: translateY(-6px) translateZ(0);
+            background: rgba(255, 255, 255, 0.95);
             box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.08);
             border-color: #fff;
         }
         
+        /* 2. เปลี่ยนจากการขยายขนาด เป็นแค่เพิ่มความสว่าง (ประหยัดสเปคเครื่องกว่า 80%) */
         .app-card:hover .ambient-bg {
-            opacity: 0.65; 
-            transform: scale(1.4) translate3d(0,0,0); 
+            opacity: 0.7; 
         }
 
         .cat-btn-active { background-color: #1a202c; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -57,21 +63,21 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
 
-        /* Modal Transitions */
+        /* 3. Modal Transitions - ระบุเจาะจง ไม่ใช้ all และเพิ่มความสมูทแบบเด้งๆ (Bouncy) */
         .modal-overlay {
             background-color: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(5px);
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s ease;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
         .modal-overlay.active {
             opacity: 1;
             visibility: visible;
         }
         .modal-content {
-            transform: translateY(20px) scale(0.95);
-            transition: all 0.3s ease;
+            transform: translateY(30px) scale(0.95);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* เอฟเฟกต์เด้งดึ๋งนุ่มๆ */
         }
         .modal-overlay.active .modal-content {
             transform: translateY(0) scale(1);
@@ -191,7 +197,7 @@
 
                 <!-- Add New App Form -->
                 <div class="flex-1">
-                    <h3 class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
+                    <h3 id="formTitle" class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
                     <form id="addAppForm" onsubmit="saveNewApp(event)" class="space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อ App</label>
@@ -226,9 +232,14 @@
                             <p class="text-[10px] text-gray-400 mt-2">เพื่อไม่ให้ Sheet ทำงานหนักเกินไป แนะนำให้ใช้ Link รูปภาพแทนการอัปโหลดครับ</p>
                         </div>
 
-                        <button type="submit" class="w-full bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg mt-4">
-                            + บันทึกข้อมูลขึ้น Cloud
-                        </button>
+                        <div class="flex gap-3 mt-4">
+                            <button type="submit" id="submitBtn" class="flex-1 w-full bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg">
+                                + บันทึกข้อมูลขึ้น Cloud
+                            </button>
+                            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors uppercase tracking-wider text-sm shadow-sm">
+                                ยกเลิก
+                            </button>
+                        </div>
                     </form>
                 </div>
 
@@ -266,6 +277,7 @@
         
         let allApps = [];
         let activeCategory = 'ทั้งหมด';
+        let editingAppId = null; // ตัวแปรสำหรับเช็คว่ากำลังแก้ไขแอปไหนอยู่
 
         window.onload = () => {
             if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'ใส่_URL_ของคุนที่นี่') {
@@ -447,14 +459,68 @@
                             <p class="text-[10px] text-gray-500 uppercase tracking-wider">${app.Category}</p>
                         </div>
                     </div>
-                    <button type="button" onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition-colors shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                    </button>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <!-- ปุ่มแก้ไข -->
+                        <button type="button" onclick="editApp('${app.id}')" class="text-blue-400 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="แก้ไข">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <!-- ปุ่มลบ -->
+                        <button type="button" onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition-colors" title="ลบ">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
                 </div>
             `).join(''); 
         }
 
-        // --- Post Data to Cloud ---
+        // --- เตรียมข้อมูลสำหรับแก้ไข ---
+        function editApp(id) {
+            const app = allApps.find(a => a.id === id);
+            if(!app) return;
+            
+            editingAppId = id; // ตั้งสถานะว่ากำลังแก้ไข
+            
+            // เปลี่ยนหน้าตาฟอร์มให้เป็นโหมดแก้ไข
+            document.getElementById('formTitle').innerText = '✏️ แก้ไขแอปพลิเคชัน';
+            document.getElementById('submitBtn').innerHTML = '💾 บันทึกการแก้ไข';
+            document.getElementById('submitBtn').className = 'flex-1 w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+            // ดึงข้อมูลเดิมมาใส่ในฟอร์ม
+            document.getElementById('appName').value = app.Name || '';
+            document.getElementById('appDesc').value = app.Description || '';
+            document.getElementById('appLink').value = app.Link || '';
+            document.getElementById('appCategory').value = app.Category || '';
+            
+            // จัดการรูปภาพ
+            if(app.IconURL && app.IconURL.startsWith('data:image')) {
+                // ถ้าเป็นรูปอัปโหลด จะไม่สามารถใส่ค่าคืนไปที่ input file ได้ ให้เลือกโหมดอัปโหลดรอไว้
+                document.querySelector('input[name="iconType"][value="upload"]').checked = true;
+                toggleIconInput();
+            } else {
+                // ถ้าเป็น URL
+                document.querySelector('input[name="iconType"][value="url"]').checked = true;
+                toggleIconInput();
+                document.getElementById('appIconUrl').value = app.IconURL || '';
+            }
+        }
+
+        // --- ยกเลิกการแก้ไข ---
+        function cancelEdit() {
+            editingAppId = null; // คืนค่าสถานะ
+            
+            // คืนค่าหน้าตาฟอร์มเป็นโหมดเพิ่มข้อมูล
+            document.getElementById('formTitle').innerText = 'เพิ่มแอปพลิเคชันใหม่';
+            document.getElementById('submitBtn').innerHTML = '+ บันทึกข้อมูลขึ้น Cloud';
+            document.getElementById('submitBtn').className = 'flex-1 w-full bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            
+            document.getElementById('addAppForm').reset();
+            document.querySelector('input[name="iconType"][value="url"]').checked = true;
+            toggleIconInput();
+        }
+
+        // --- Post Data to Cloud (ใช้ได้ทั้ง Add และ Edit) ---
         async function saveNewApp(e) {
             e.preventDefault();
             
@@ -474,11 +540,19 @@
                     const fileInput = document.getElementById('appIconFile');
                     if (fileInput.files.length > 0) {
                         iconURL = await resizeAndConvertToBase64(fileInput.files[0]);
+                    } else if (editingAppId) {
+                        // กรณีแก้ไข แต่ไม่ได้อัปโหลดรูปใหม่ ให้ใช้รูปเดิม
+                        const oldApp = allApps.find(a => a.id === editingAppId);
+                        iconURL = oldApp ? (oldApp.IconURL || '') : '';
                     }
                 }
 
-                const newApp = {
-                    id: Date.now().toString(),
+                // ตรวจสอบว่าเป็นการแก้ไขหรือเพิ่มใหม่
+                const targetId = editingAppId ? editingAppId : Date.now().toString();
+                const actionType = editingAppId ? 'edit' : 'add';
+
+                const appData = {
+                    id: targetId,
                     Name: name,
                     Description: desc,
                     Link: link,
@@ -486,10 +560,9 @@
                     IconURL: iconURL
                 };
 
-                // ส่งไปที่ Google Sheets (ใช้ URLSearchParams ป้องกันปัญหา CORS)
                 const formData = new URLSearchParams();
-                formData.append('action', 'add');
-                formData.append('data', JSON.stringify(newApp));
+                formData.append('action', actionType);
+                formData.append('data', JSON.stringify(appData));
 
                 await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
@@ -497,18 +570,19 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
 
-                // อัปเดตในเครื่องทันทีโดยไม่ต้องรอโหลดใหม่ทั้งหมด
-                allApps.push(newApp);
-                refreshUI();
+                // อัปเดตในเครื่องทันที
+                if (editingAppId) {
+                    const index = allApps.findIndex(a => a.id === editingAppId);
+                    if(index !== -1) allApps[index] = appData;
+                } else {
+                    allApps.push(appData);
+                }
                 
-                // รีเซ็ตฟอร์ม
-                document.getElementById('addAppForm').reset();
-                document.getElementById('appIconUrl').classList.remove('hidden');
-                document.getElementById('appIconFile').classList.add('hidden');
-                document.querySelector('input[name="iconType"][value="url"]').checked = true;
+                refreshUI();
+                cancelEdit(); // ล้างฟอร์มและรีเซ็ตสถานะ
                 
                 document.getElementById('syncOverlay').classList.add('hidden');
-                showAlert('success', 'ซิงค์ข้อมูลสำเร็จ!', 'เพิ่มแอปพลิเคชันลงใน Sheet เรียบร้อยแล้ว');
+                showAlert('success', 'ซิงค์ข้อมูลสำเร็จ!', editingAppId ? 'แก้ไขข้อมูลเรียบร้อยแล้ว' : 'เพิ่มแอปพลิเคชันลงใน Sheet เรียบร้อยแล้ว');
 
             } catch (error) {
                 document.getElementById('syncOverlay').classList.add('hidden');

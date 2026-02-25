@@ -336,8 +336,18 @@
             grid.classList.remove('hidden');
             empty.classList.add('hidden');
 
-            grid.innerHTML = apps.map(app => `
-                <a href="${app.Link}" target="_blank" class="app-card group p-6 rounded-3xl relative overflow-hidden h-full flex flex-col">
+            grid.innerHTML = apps.map(app => {
+                // จัดการลิงก์ให้ถูกต้อง ป้องกันปัญหาพิมพ์แค่ www หรือไม่ได้ใส่ลิงก์
+                let safeLink = app.Link ? app.Link.trim() : '#';
+                if (safeLink !== '#' && !safeLink.startsWith('http') && !safeLink.startsWith('mailto:')) {
+                    safeLink = 'https://' + safeLink; // เติม https:// ให้อัตโนมัติถ้าลืม
+                }
+                
+                // ถ้ามีลิงก์ให้เปิดแท็บใหม่ ถ้าไม่มีไม่ต้องเปิดแท็บใหม่
+                const targetAttr = safeLink !== '#' ? 'target="_blank"' : '';
+
+                return `
+                <a href="${safeLink}" ${targetAttr} class="app-card group p-6 rounded-3xl relative overflow-hidden h-full flex flex-col">
                     <div class="ambient-bg">
                         ${app.IconURL 
                             ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">` 
@@ -365,7 +375,8 @@
                         </div>
                     </div>
                 </a>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function filterApps() {

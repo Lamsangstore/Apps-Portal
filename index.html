@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Hub Portal - Firebase Edition</title>
+    <title>App Hub Portal</title>
+
+    <!-- Favicon: pink grid/apps emoji SVG -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fdf2f8'/%3E%3Crect x='8' y='8' width='20' height='20' rx='5' fill='%23f472b6'/%3E%3Crect x='36' y='8' width='20' height='20' rx='5' fill='%23fb923c'/%3E%3Crect x='8' y='36' width='20' height='20' rx='5' fill='%2360a5fa'/%3E%3Crect x='36' y='36' width='20' height='20' rx='5' fill='%23a78bfa'/%3E%3C/svg%3E">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #fdfbf7; color: #4a5568; }
         .ambient-bg { position:absolute;inset:0;z-index:0;opacity:.35;filter:blur(40px) saturate(150%);transform:scale(1.2) translateZ(0);will-change:opacity;transition:opacity .4s ease-out;pointer-events:none; }
@@ -25,6 +32,26 @@
         .loader { border:3px solid #f3f3f3;border-top:3px solid #f472b6;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;display:inline-block; }
         @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
         .firebase-badge { background:linear-gradient(135deg,#FF6D00,#FFA000);color:white;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.1em;text-transform:uppercase; }
+
+        /* Excel drop zone */
+        .drop-zone { border:2px dashed #e2e8f0;border-radius:16px;transition:all .3s ease;cursor:pointer; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color:#f472b6;background:#fdf2f8; }
+        .drop-zone.drag-over { transform:scale(1.01); }
+
+        /* Import preview table */
+        .preview-table { font-size:12px; }
+        .preview-table th { background:#f7fafc;padding:6px 10px;text-align:left;font-weight:700;color:#718096;border-bottom:1px solid #e2e8f0;white-space:nowrap; }
+        .preview-table td { padding:5px 10px;border-bottom:1px solid #f0f0f0;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .preview-table tr:hover td { background:#fffbfe; }
+        .row-ok   { color:#10b981; }
+        .row-warn { color:#f59e0b; }
+        .row-err  { color:#ef4444; }
+
+        /* Tab */
+        .tab-btn { padding:8px 18px;border-radius:12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;transition:all .2s; }
+        .tab-btn.active { background:#1a202c;color:white; }
+        .tab-btn:not(.active) { color:#718096; }
+        .tab-btn:not(.active):hover { background:#f7fafc;color:#4a5568; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -37,12 +64,9 @@
                 <img src="https://i.postimg.cc/KY2KcC5g/New-folder-9.jpg" alt="Logo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
             </div>
             <div>
-                <h1 class="text-3xl md:text-5xl font-bold text-gray-800 tracking-tight uppercase italic mb-1">
-                    App <span class="text-pink-400">Directory</span>
-                </h1>
+                <h1 class="text-3xl md:text-5xl font-bold text-gray-800 tracking-tight uppercase italic mb-1">App <span class="text-pink-400">Directory</span></h1>
                 <p class="text-gray-400 text-xs md:text-base tracking-[0.2em] font-light flex items-center gap-2">
-                    PASTEL COLLECTION &amp; TOOLS
-                    <span class="firebase-badge">🔥 Firestore</span>
+                    PASTEL COLLECTION &amp; TOOLS <span class="firebase-badge">🔥 Firestore</span>
                 </p>
             </div>
         </div>
@@ -61,19 +85,14 @@
         </div>
     </header>
 
-    <!-- Category Bar -->
     <div id="categoryBar" class="flex flex-wrap gap-3 md:gap-4 mb-10"></div>
 
-    <!-- Loading -->
     <div id="mainLoading" class="flex flex-col items-center justify-center py-20">
         <div class="loader mb-4" style="width:40px;height:40px;border-width:4px;"></div>
         <p class="text-gray-400 uppercase tracking-widest text-sm font-bold">กำลังเชื่อมต่อ Firebase...</p>
     </div>
 
-    <!-- App Grid -->
     <div id="appGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10 pb-20 hidden"></div>
-
-    <!-- Empty State -->
     <div id="emptyState" class="hidden text-center py-32 bg-white/50 rounded-3xl border border-dashed border-gray-300">
         <p class="text-5xl mb-4">🌸</p>
         <p class="text-gray-400 uppercase tracking-widest text-lg">No apps found</p>
@@ -103,70 +122,72 @@
 </div>
 
 <!-- ===== ADMIN MODAL ===== -->
-<div id="adminModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4 py-10 overflow-y-auto">
-    <div class="modal-content bg-white rounded-3xl shadow-2xl border border-pink-100 max-w-4xl w-full my-auto flex flex-col max-h-full">
+<div id="adminModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center px-2 py-4 md:px-4 md:py-10 overflow-y-auto">
+    <div class="modal-content bg-white rounded-3xl shadow-2xl border border-pink-100 max-w-5xl w-full my-auto flex flex-col" style="max-height:95vh;">
 
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl">
-            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-3">
+        <!-- Modal Header -->
+        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl shrink-0">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Manage Data <span class="firebase-badge">🔥 Firestore</span>
+                Manage Data
+                <span class="firebase-badge">🔥 Firestore</span>
             </h2>
             <button onclick="closeModals()" class="p-2 bg-white rounded-full hover:bg-pink-50 text-gray-400 hover:text-pink-500 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
-        <div class="p-6 md:p-8 overflow-y-auto flex-1 flex flex-col lg:flex-row gap-8 relative">
+        <!-- Tabs -->
+        <div class="flex gap-2 px-6 pt-5 shrink-0">
+            <button class="tab-btn active" id="tabManual" onclick="switchTab('manual')">✏️ เพิ่ม / แก้ไข</button>
+            <button class="tab-btn" id="tabImport" onclick="switchTab('import')">📊 นำเข้า Excel</button>
+            <button class="tab-btn" id="tabList"   onclick="switchTab('list')">
+                📋 รายการ (<span id="appCountTab">0</span>)
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="overflow-y-auto flex-1 relative">
             <!-- Sync Overlay -->
-            <div id="syncOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden rounded-b-3xl">
+            <div id="syncOverlay" class="absolute inset-0 bg-white/85 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden rounded-b-3xl">
                 <div class="loader mb-3"></div>
                 <p id="syncMsg" class="text-orange-500 font-bold text-sm tracking-widest uppercase">กำลังซิงค์...</p>
             </div>
 
-            <!-- ===== FORM ===== -->
-            <div class="flex-1">
-                <h3 id="formTitle" class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
-                <form id="addAppForm" onsubmit="saveApp(event)" class="space-y-4">
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อ App</label>
-                        <input type="text" id="appName" required
-                            class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+            <!-- TAB: Manual Add/Edit -->
+            <div id="panelManual" class="p-6">
+                <h3 id="formTitle" class="font-bold text-gray-700 mb-5 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
+                <form id="addAppForm" onsubmit="saveApp(event)" class="space-y-4 max-w-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อ App *</label>
+                            <input type="text" id="appName" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หมวดหมู่ *</label>
+                            <input list="categoryList" id="appCategory" required autocomplete="off" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                            <datalist id="categoryList"></datalist>
+                        </div>
                     </div>
-
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">รายละเอียด</label>
-                        <textarea id="appDesc" rows="2"
-                            class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none resize-none"></textarea>
+                        <textarea id="appDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none resize-none"></textarea>
                     </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ลิงก์ URL</label>
-                        <input type="url" id="appLink" required
-                            class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ลิงก์ URL *</label>
+                        <input type="url" id="appLink" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หมวดหมู่</label>
-                        <input list="categoryList" id="appCategory" required autocomplete="off"
-                            class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
-                        <datalist id="categoryList"></datalist>
-                    </div>
-
-                    <!-- Icon URL -->
                     <div class="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">ไอคอน — วาง URL รูปภาพ</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">ไอคอน — URL รูปภาพ</label>
                         <input type="url" id="appIconUrl" placeholder="https://example.com/icon.png"
-                            class="w-full px-4 py-2 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
-                        <!-- Preview -->
+                            class="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
                         <div id="iconPreviewWrap" class="hidden mt-3 flex items-center gap-3">
-                            <img id="iconPreview" src="" alt="preview" class="w-14 h-14 rounded-2xl object-cover border-2 border-gray-200">
+                            <img id="iconPreview" src="" alt="preview" class="w-12 h-12 rounded-xl object-cover border-2 border-gray-200">
                             <p class="text-xs text-gray-400">ตัวอย่างไอคอน</p>
                         </div>
-                        <p class="text-[10px] text-gray-400 mt-2">ใช้ link จาก postimg, imgur, Google Drive หรือโฮสรูปอื่นๆ ได้เลยครับ</p>
+                        <p class="text-[10px] text-gray-400 mt-2">ใช้ link จาก postimg, imgur หรือโฮสรูปภาพอื่นๆ ได้เลยครับ</p>
                     </div>
-
-                    <div class="flex gap-3 pt-2">
+                    <div class="flex gap-3 pt-1">
                         <button type="submit" id="submitBtn"
                             class="flex-1 bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg">
                             + บันทึกขึ้น Firestore
@@ -179,14 +200,97 @@
                 </form>
             </div>
 
-            <!-- ===== APP LIST ===== -->
-            <div class="flex-1 flex flex-col h-[500px] lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-100 pt-6 lg:pt-0 lg:pl-8">
-                <h3 class="font-bold text-gray-700 mb-4 uppercase tracking-wider text-sm border-b pb-2 flex justify-between items-center">
-                    รายการแอปที่มีอยู่
-                    <span id="appCount" class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">0</span>
-                </h3>
-                <div class="overflow-y-auto flex-1 pr-2 space-y-3" id="adminAppList"></div>
+            <!-- TAB: Import Excel -->
+            <div id="panelImport" class="p-6 hidden">
+                <!-- Step 1: Download template -->
+                <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <p class="font-bold text-green-700 text-sm mb-0.5">📥 Step 1 — ดาวน์โหลดไฟล์ต้นแบบ</p>
+                        <p class="text-green-600 text-xs">ไฟล์ Excel พร้อมหัวคอลัมน์และข้อมูลตัวอย่าง 3 แถว</p>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="downloadTemplate(false)"
+                            class="flex items-center gap-2 bg-white border border-green-300 text-green-700 font-bold px-4 py-2 rounded-xl hover:bg-green-50 transition-colors text-sm shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            ไฟล์เปล่า
+                        </button>
+                        <button onclick="downloadTemplate(true)"
+                            class="flex items-center gap-2 bg-green-500 text-white font-bold px-4 py-2 rounded-xl hover:bg-green-600 transition-colors text-sm shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            + ตัวอย่าง 3 แถว
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Upload -->
+                <p class="font-bold text-gray-700 text-sm mb-3 uppercase tracking-wider">📤 Step 2 — อัปโหลดไฟล์ Excel</p>
+                <div id="dropZone" class="drop-zone p-10 text-center mb-5"
+                    onclick="document.getElementById('excelFileInput').click()"
+                    ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+                    <div class="text-4xl mb-3">📊</div>
+                    <p class="font-bold text-gray-600 mb-1">คลิกเพื่อเลือกไฟล์ หรือลากมาวางที่นี่</p>
+                    <p class="text-gray-400 text-sm">รองรับไฟล์ .xlsx และ .xls</p>
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelFile(event)">
+                </div>
+
+                <!-- Step 3: Preview -->
+                <div id="importPreviewSection" class="hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="font-bold text-gray-700 text-sm uppercase tracking-wider">👀 Step 3 — ตรวจสอบข้อมูลก่อน Import</p>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="row-ok font-bold" id="previewOkCount">0 พร้อม</span>
+                            <span class="row-warn font-bold" id="previewWarnCount"></span>
+                            <span class="row-err font-bold" id="previewErrCount"></span>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-gray-200 mb-5">
+                        <table class="preview-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>ชื่อ App</th>
+                                    <th>รายละเอียด</th>
+                                    <th>ลิงก์ URL</th>
+                                    <th>หมวดหมู่</th>
+                                    <th>Icon URL</th>
+                                    <th>สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="importPreviewBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Import options -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
+                            <input type="checkbox" id="skipDuplicates" checked class="w-4 h-4 rounded text-pink-400 focus:ring-pink-300">
+                            <span class="text-gray-600">ข้ามแถวที่มีชื่อซ้ำกับใน Firestore</span>
+                        </label>
+                        <div class="flex gap-3">
+                            <button onclick="resetImport()"
+                                class="bg-gray-100 text-gray-600 font-bold px-5 py-2.5 rounded-xl hover:bg-gray-200 transition-colors text-sm">
+                                รีเซ็ต
+                            </button>
+                            <button id="importBtn" onclick="importToFirestore()"
+                                class="bg-pink-400 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-pink-500 transition-colors text-sm shadow-md hover:shadow-lg flex items-center gap-2">
+                                🚀 Import ขึ้น Firestore
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- TAB: App List -->
+            <div id="panelList" class="p-6 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-gray-700 uppercase tracking-wider text-sm">รายการแอปทั้งหมด (<span id="appCount">0</span>)</h3>
+                    <input type="text" id="adminSearch" oninput="renderAdminList()" placeholder="ค้นหา..."
+                        class="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-pink-200 outline-none w-40">
+                </div>
+                <div class="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1" id="adminAppList"></div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -203,7 +307,7 @@
 
 <script>
 // ============================================================
-// 🔥 FIREBASE CONFIG
+// 🔥 CONFIG
 // ============================================================
 const firebaseConfig = {
     apiKey:            "AIzaSyApNSt3_GYoge3dqS3RDvsY7jR4EiZ2sgw",
@@ -213,20 +317,21 @@ const firebaseConfig = {
     messagingSenderId: "207483320653",
     appId:             "1:207483320653:web:29b862ad29e484e45e9f04"
 };
-
 const ADMIN_PASSWORD  = '03062534';
 const COLLECTION_NAME = 'apps';
 
-// ============================================================
+// Excel column mapping (case-insensitive)
+const COL_MAP = { name:'Name', description:'Description', link:'Link', category:'Category', iconurl:'IconURL', icon:'IconURL' };
+
 // State
-// ============================================================
 let db;
 let allApps        = [];
 let activeCategory = 'ทั้งหมด';
 let editingAppId   = null;
+let parsedRows     = []; // Excel parsed rows
 
 // ============================================================
-// Init Firebase
+// Init
 // ============================================================
 window.onload = () => {
     try {
@@ -239,95 +344,66 @@ window.onload = () => {
     }
 };
 
-// ============================================================
-// Real-time Firestore Listener
-// ============================================================
 function subscribeToApps() {
-    db.collection(COLLECTION_NAME)
-      .orderBy('createdAt', 'asc')
-      .onSnapshot(snapshot => {
-          allApps = snapshot.docs.map(doc => ({
-              id:          doc.id,
-              Name:        String(doc.data().Name        || ''),
-              Description: String(doc.data().Description || ''),
-              Link:        String(doc.data().Link        || ''),
-              Category:    String(doc.data().Category    || ''),
-              IconURL:     String(doc.data().IconURL      || ''),
-          })).filter(a => a.Name.trim() !== '');
-
-          document.getElementById('mainLoading').classList.add('hidden');
-          refreshUI();
-      }, err => {
-          document.getElementById('mainLoading').innerHTML = `
-              <div class="text-center">
-                <p class="text-red-500 font-bold mb-2">❌ Firestore Error</p>
-                <p class="text-gray-500 text-sm">${err.message}</p>
-                <p class="text-gray-400 text-xs mt-3">ตรวจสอบ Firestore Security Rules ครับ:<br>
-                <code class="bg-gray-100 px-2 py-1 rounded text-xs">allow read, write: if true;</code></p>
-              </div>`;
-      });
+    db.collection(COLLECTION_NAME).orderBy('createdAt','asc').onSnapshot(snap => {
+        allApps = snap.docs.map(doc => ({
+            id:          doc.id,
+            Name:        String(doc.data().Name        || ''),
+            Description: String(doc.data().Description || ''),
+            Link:        String(doc.data().Link        || ''),
+            Category:    String(doc.data().Category    || ''),
+            IconURL:     String(doc.data().IconURL      || ''),
+        })).filter(a => a.Name.trim() !== '');
+        document.getElementById('mainLoading').classList.add('hidden');
+        refreshUI();
+    }, err => {
+        document.getElementById('mainLoading').innerHTML =
+            `<p class="text-red-500 font-bold text-center">❌ ${err.message}<br>
+             <span class="text-gray-400 text-xs">ตรวจสอบ Firestore Security Rules</span></p>`;
+    });
 }
 
 // ============================================================
 // UI
 // ============================================================
 function refreshUI() {
-    renderCategories();
-    filterApps();
-    updateDatalist();
-    renderAdminList();
+    renderCategories(); filterApps(); updateDatalist(); renderAdminList();
+    document.getElementById('appCountTab').innerText = allApps.length;
+    document.getElementById('appCount').innerText    = allApps.length;
 }
 
 function renderCategories() {
     const cats = ['ทั้งหมด', ...new Set(allApps.map(a => a.Category).filter(Boolean))];
     document.getElementById('categoryBar').innerHTML = cats.map(cat => `
         <button onclick="filterByCategory('${cat}')"
-            class="cat-btn px-6 md:px-8 py-3 rounded-2xl text-xs md:text-sm font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat ? 'cat-btn-active' : 'cat-btn-inactive'}">
-            ${cat}
-        </button>`).join('');
+            class="cat-btn px-6 md:px-8 py-3 rounded-2xl text-xs md:text-sm font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory===cat?'cat-btn-active':'cat-btn-inactive'}">
+            ${cat}</button>`).join('');
 }
 
 function renderApps(apps) {
-    const grid  = document.getElementById('appGrid');
-    const empty = document.getElementById('emptyState');
+    const grid=document.getElementById('appGrid'), empty=document.getElementById('emptyState');
     if (!apps.length) { grid.classList.add('hidden'); empty.classList.remove('hidden'); return; }
     grid.classList.remove('hidden'); empty.classList.add('hidden');
-
     grid.innerHTML = apps.map(app => {
-        let link = (app.Link || '').trim() || '#';
-        if (link !== '#' && !link.startsWith('http') && !link.startsWith('mailto:')) link = 'https://' + link;
-        const target   = link !== '#' ? 'target="_blank"' : '';
-        const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=ffd6e0&color=fff&size=128`;
-
+        let link = (app.Link||'').trim()||'#';
+        if (link!=='#' && !link.startsWith('http') && !link.startsWith('mailto:')) link='https://'+link;
+        const target=link!=='#'?'target="_blank"':'';
+        const fb=`https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=ffd6e0&color=fff&size=128`;
         return `
         <a href="${link}" ${target} class="app-card group p-6 rounded-3xl relative overflow-hidden h-full flex flex-col">
-            <div class="ambient-bg">
-                ${app.IconURL
-                    ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`
-                    : `<div class="w-full h-full bg-gradient-to-br from-pink-200 to-blue-200"></div>`}
-            </div>
+            <div class="ambient-bg">${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:`<div class="w-full h-full bg-gradient-to-br from-pink-200 to-blue-200"></div>`}</div>
             <div class="relative z-10 flex flex-col h-full">
                 <div class="flex flex-col gap-5 mb-4">
                     <div class="flex items-start justify-between">
                         <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white/90 flex items-center justify-center border border-white/50 shadow-sm group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 overflow-hidden shrink-0">
-                            ${app.IconURL
-                                ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.src='${fallback}'">`
-                                : `<div class="text-pink-300 font-bold text-4xl md:text-5xl select-none">${app.Name.charAt(0)}</div>`}
+                            ${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.src='${fb}'">`:`<div class="text-pink-300 font-bold text-4xl select-none">${app.Name.charAt(0)}</div>`}
                         </div>
-                        <span class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-xl mt-1 border border-white">
-                            ${app.Category || 'General'}
-                        </span>
+                        <span class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-xl mt-1 border border-white">${app.Category||'General'}</span>
                     </div>
-                    <h3 class="font-bold text-gray-800 text-xl group-hover:text-pink-500 transition-colors uppercase tracking-tight break-words leading-tight pl-1">
-                        ${app.Name}
-                    </h3>
+                    <h3 class="font-bold text-gray-800 text-xl group-hover:text-pink-500 transition-colors uppercase tracking-tight break-words leading-tight pl-1">${app.Name}</h3>
                 </div>
-                <div class="flex-grow pl-1">
-                    <p class="text-sm text-gray-600 leading-relaxed mb-6 font-medium break-words">${app.Description}</p>
-                </div>
-                <div class="mt-auto pt-4 border-t border-gray-200/50 flex items-center justify-center text-xs font-black uppercase tracking-[0.25em] text-gray-400 group-hover:text-pink-500 transition-all">
-                    Open App
-                </div>
+                <div class="flex-grow pl-1"><p class="text-sm text-gray-600 leading-relaxed mb-6 font-medium break-words">${app.Description}</p></div>
+                <div class="mt-auto pt-4 border-t border-gray-200/50 flex items-center justify-center text-xs font-black uppercase tracking-[0.25em] text-gray-400 group-hover:text-pink-500 transition-all">Open App</div>
             </div>
         </a>`;
     }).join('');
@@ -336,48 +412,59 @@ function renderApps(apps) {
 function filterApps() {
     const term = document.getElementById('searchInput').value.toLowerCase();
     renderApps(allApps.filter(a =>
-        (a.Name + a.Description + a.Category).toLowerCase().includes(term) &&
-        (activeCategory === 'ทั้งหมด' || a.Category === activeCategory)
+        (a.Name+a.Description+a.Category).toLowerCase().includes(term) &&
+        (activeCategory==='ทั้งหมด'||a.Category===activeCategory)
     ));
 }
-
-function filterByCategory(cat) { activeCategory = cat; refreshUI(); }
+function filterByCategory(cat) { activeCategory=cat; refreshUI(); }
 
 function updateDatalist() {
     document.getElementById('categoryList').innerHTML =
-        [...new Set(allApps.map(a => a.Category).filter(Boolean))]
-        .map(c => `<option value="${c}">`).join('');
+        [...new Set(allApps.map(a=>a.Category).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
 }
 
 function renderAdminList() {
-    const list = document.getElementById('adminAppList');
-    document.getElementById('appCount').innerText = allApps.length;
-    if (!allApps.length) {
-        list.innerHTML = `<p class="text-center text-sm text-gray-400 py-10 border border-dashed rounded-xl">ยังไม่มีข้อมูล</p>`;
-        return;
-    }
-    list.innerHTML = [...allApps].reverse().map(app => `
-        <div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-md transition-shadow">
+    const list  = document.getElementById('adminAppList');
+    const term  = (document.getElementById('adminSearch')?.value||'').toLowerCase();
+    const shown = [...allApps].reverse().filter(a =>
+        !term || (a.Name+a.Category).toLowerCase().includes(term)
+    );
+    document.getElementById('appCount').innerText    = allApps.length;
+    document.getElementById('appCountTab').innerText = allApps.length;
+    if (!shown.length) { list.innerHTML=`<p class="text-center text-sm text-gray-400 py-8 border border-dashed rounded-xl">ไม่พบข้อมูล</p>`; return; }
+    list.innerHTML = shown.map(app=>`
+        <div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-sm transition-shadow">
             <div class="flex items-center gap-3 overflow-hidden">
-                <div class="w-10 h-10 rounded-lg bg-white shrink-0 overflow-hidden border border-gray-200">
-                    ${app.IconURL
-                        ? `<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`
-                        : `<div class="w-full h-full flex items-center justify-center text-gray-400 text-sm font-bold">${app.Name.charAt(0)}</div>`}
+                <div class="w-9 h-9 rounded-lg bg-white shrink-0 overflow-hidden border border-gray-200">
+                    ${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:`<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">${app.Name.charAt(0)}</div>`}
                 </div>
                 <div class="truncate">
                     <p class="font-bold text-sm text-gray-800 truncate">${app.Name}</p>
-                    <p class="text-[10px] text-gray-500 uppercase tracking-wider">${app.Category}</p>
+                    <p class="text-[10px] text-gray-500 uppercase">${app.Category}</p>
                 </div>
             </div>
-            <div class="flex items-center gap-1 shrink-0">
-                <button type="button" onclick="editApp('${app.id}')" class="text-blue-400 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="แก้ไข">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            <div class="flex gap-1 shrink-0">
+                <button onclick="editApp('${app.id}')" class="text-blue-400 hover:bg-blue-50 p-1.5 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 </button>
-                <button type="button" onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition-colors" title="ลบ">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                <button onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-1.5 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
                 </button>
             </div>
         </div>`).join('');
+}
+
+// ============================================================
+// Tabs
+// ============================================================
+function switchTab(tab) {
+    ['manual','import','list'].forEach(t => {
+        document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('hidden');
+        document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('active');
+    });
+    document.getElementById('panel'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.remove('hidden');
+    document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+    if (tab==='list') renderAdminList();
 }
 
 // ============================================================
@@ -385,72 +472,58 @@ function renderAdminList() {
 // ============================================================
 function openPasswordModal() {
     document.getElementById('passwordModal').classList.add('active');
-    document.getElementById('adminPassword').value = '';
+    document.getElementById('adminPassword').value='';
     document.getElementById('passwordError').classList.add('hidden');
-    setTimeout(() => document.getElementById('adminPassword').focus(), 300);
+    setTimeout(()=>document.getElementById('adminPassword').focus(),300);
 }
-function closeModals() {
-    document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
-}
-document.getElementById('adminPassword').addEventListener('keypress', e => {
-    if (e.key === 'Enter') checkPassword();
-});
+function closeModals() { document.querySelectorAll('.modal-overlay').forEach(el=>el.classList.remove('active')); }
+document.getElementById('adminPassword').addEventListener('keypress',e=>{ if(e.key==='Enter') checkPassword(); });
 function checkPassword() {
-    if (document.getElementById('adminPassword').value === ADMIN_PASSWORD) {
+    if (document.getElementById('adminPassword').value===ADMIN_PASSWORD) {
         document.getElementById('passwordModal').classList.remove('active');
-        setTimeout(() => { document.getElementById('adminModal').classList.add('active'); refreshUI(); }, 300);
-    } else {
-        document.getElementById('passwordError').classList.remove('hidden');
-    }
+        setTimeout(()=>{ document.getElementById('adminModal').classList.add('active'); refreshUI(); },300);
+    } else document.getElementById('passwordError').classList.remove('hidden');
 }
 
 // ============================================================
-// Icon preview on URL input
+// Icon Preview
 // ============================================================
-document.getElementById('appIconUrl').addEventListener('input', function () {
-    const url  = this.value.trim();
-    const wrap = document.getElementById('iconPreviewWrap');
-    const img  = document.getElementById('iconPreview');
-    if (url) {
-        img.src = url;
-        img.onerror = () => { wrap.classList.add('hidden'); };
-        img.onload  = () => { wrap.classList.remove('hidden'); };
-    } else {
-        wrap.classList.add('hidden');
-    }
+document.getElementById('appIconUrl').addEventListener('input',function(){
+    const url=this.value.trim(), wrap=document.getElementById('iconPreviewWrap'), img=document.getElementById('iconPreview');
+    if(url){ img.src=url; img.onerror=()=>wrap.classList.add('hidden'); img.onload=()=>wrap.classList.remove('hidden'); }
+    else wrap.classList.add('hidden');
 });
 
 // ============================================================
 // Edit / Cancel
 // ============================================================
 function editApp(id) {
-    const app = allApps.find(a => a.id === id); if (!app) return;
-    editingAppId = id;
-    document.getElementById('formTitle').innerText     = '✏️ แก้ไขแอปพลิเคชัน';
-    document.getElementById('submitBtn').innerHTML     = '💾 บันทึกการแก้ไข';
-    document.getElementById('submitBtn').className     = 'flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition-colors uppercase tracking-wider text-sm shadow-md';
+    const app=allApps.find(a=>a.id===id); if(!app) return;
+    editingAppId=id;
+    switchTab('manual');
+    document.getElementById('formTitle').innerText  = '✏️ แก้ไขแอปพลิเคชัน';
+    document.getElementById('submitBtn').innerHTML  = '💾 บันทึกการแก้ไข';
+    document.getElementById('submitBtn').className  = 'flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition-colors uppercase tracking-wider text-sm shadow-md';
     document.getElementById('cancelEditBtn').classList.remove('hidden');
-    document.getElementById('appName').value           = app.Name;
-    document.getElementById('appDesc').value           = app.Description;
-    document.getElementById('appLink').value           = app.Link;
-    document.getElementById('appCategory').value       = app.Category;
-    document.getElementById('appIconUrl').value        = app.IconURL;
-    // trigger preview
+    document.getElementById('appName').value        = app.Name;
+    document.getElementById('appDesc').value        = app.Description;
+    document.getElementById('appLink').value        = app.Link;
+    document.getElementById('appCategory').value    = app.Category;
+    document.getElementById('appIconUrl').value     = app.IconURL;
     document.getElementById('appIconUrl').dispatchEvent(new Event('input'));
 }
-
 function cancelEdit() {
-    editingAppId = null;
-    document.getElementById('formTitle').innerText     = 'เพิ่มแอปพลิเคชันใหม่';
-    document.getElementById('submitBtn').innerHTML     = '+ บันทึกขึ้น Firestore';
-    document.getElementById('submitBtn').className     = 'flex-1 bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
+    editingAppId=null;
+    document.getElementById('formTitle').innerText  = 'เพิ่มแอปพลิเคชันใหม่';
+    document.getElementById('submitBtn').innerHTML  = '+ บันทึกขึ้น Firestore';
+    document.getElementById('submitBtn').className  = 'flex-1 bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
     document.getElementById('cancelEditBtn').classList.add('hidden');
     document.getElementById('addAppForm').reset();
     document.getElementById('iconPreviewWrap').classList.add('hidden');
 }
 
 // ============================================================
-// 🔥 Save (Add / Edit)
+// 🔥 Save / Delete (Firestore)
 // ============================================================
 async function saveApp(e) {
     e.preventDefault();
@@ -463,64 +536,187 @@ async function saveApp(e) {
             Category:    document.getElementById('appCategory').value.trim(),
             IconURL:     document.getElementById('appIconUrl').value.trim(),
         };
-
         if (editingAppId) {
             await db.collection(COLLECTION_NAME).doc(editingAppId).update(data);
-            showAlert('success', 'แก้ไขสำเร็จ! 🎉', 'อัปเดตข้อมูลใน Firestore เรียบร้อยแล้ว');
+            showAlert('success','แก้ไขสำเร็จ! 🎉','อัปเดตข้อมูลใน Firestore เรียบร้อยแล้ว');
         } else {
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection(COLLECTION_NAME).add(data);
-            showAlert('success', 'เพิ่มสำเร็จ! 🎉', 'บันทึกแอปลงใน Firestore เรียบร้อยแล้ว');
+            showAlert('success','เพิ่มสำเร็จ! 🎉','บันทึกแอปลงใน Firestore เรียบร้อยแล้ว');
         }
         cancelEdit();
-    } catch (err) {
-        showAlert('error', 'เกิดข้อผิดพลาด', err.message);
-    } finally {
-        hideSync();
-    }
+    } catch(err) { showAlert('error','เกิดข้อผิดพลาด',err.message); }
+    finally { hideSync(); }
+}
+
+async function deleteApp(id) {
+    if (!confirm('ยืนยันลบแอปนี้?')) return;
+    showSync('กำลังลบ...');
+    try { await db.collection(COLLECTION_NAME).doc(id).delete(); }
+    catch(err) { showAlert('error','ลบไม่สำเร็จ',err.message); }
+    finally { hideSync(); }
 }
 
 // ============================================================
-// 🔥 Delete
+// 📊 Excel Template Download
 // ============================================================
-async function deleteApp(id) {
-    if (!confirm('ยืนยันลบแอปนี้ออกจาก Firestore?')) return;
-    showSync('กำลังลบ...');
+function downloadTemplate(withSample) {
+    const headers = ['Name','Description','Link','Category','IconURL'];
+    const sample  = withSample ? [
+        ['Google Workspace','เครื่องมือ Office บน Cloud','https://workspace.google.com','Productivity','https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Google_Workspace_Logo.svg/640px-Google_Workspace_Logo.svg.png'],
+        ['Figma','ออกแบบ UI/UX ออนไลน์','https://figma.com','Design','https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg'],
+        ['Notion','จดบันทึก & จัดการงาน','https://notion.so','Productivity','https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png'],
+    ] : [];
+
+    const ws  = XLSX.utils.aoa_to_sheet([headers, ...sample]);
+    const wb  = XLSX.utils.book_new();
+
+    // Style header row (column widths)
+    ws['!cols'] = [{wch:25},{wch:40},{wch:40},{wch:20},{wch:50}];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Apps');
+    XLSX.writeFile(wb, withSample ? 'app-hub-template-sample.xlsx' : 'app-hub-template.xlsx');
+}
+
+// ============================================================
+// 📊 Excel Drag & Drop
+// ============================================================
+function onDragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('dropZone').classList.remove('drag-over'); }
+function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) processExcelFile(file);
+}
+function handleExcelFile(e) { processExcelFile(e.target.files[0]); }
+
+function processExcelFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try {
+            const wb   = XLSX.read(evt.target.result, {type:'binary'});
+            const ws   = wb.Sheets[wb.SheetNames[0]];
+            const raw  = XLSX.utils.sheet_to_json(ws, {defval:''});
+            if (!raw.length) { showAlert('error','ไฟล์ว่างเปล่า','ไม่พบข้อมูลในไฟล์ Excel'); return; }
+            parseAndPreview(raw);
+        } catch(e) { showAlert('error','อ่านไฟล์ไม่ได้',e.message); }
+    };
+    reader.readAsBinaryString(file);
+}
+
+function parseAndPreview(raw) {
+    parsedRows = raw.map((row, i) => {
+        // Normalize keys: lowercase, trim, map to standard keys
+        const norm = {};
+        Object.keys(row).forEach(k => {
+            const key = k.toLowerCase().replace(/\s+/g,'').replace('_','');
+            const mapped = COL_MAP[key] || COL_MAP[key.replace('url','URL')];
+            if (mapped) norm[mapped] = String(row[k]).trim();
+        });
+        const hasName = !!norm.Name;
+        const hasLink = !!norm.Link;
+        const hasCat  = !!norm.Category;
+        let status='ok', statusText='✅ พร้อม';
+        if (!hasName)       { status='err';  statusText='❌ ไม่มีชื่อ'; }
+        else if (!hasLink)  { status='warn'; statusText='⚠️ ไม่มี URL'; }
+        else if (!hasCat)   { status='warn'; statusText='⚠️ ไม่มีหมวด'; }
+        return { row:i+2, Name:norm.Name||'', Description:norm.Description||'', Link:norm.Link||'', Category:norm.Category||'', IconURL:norm.IconURL||'', status, statusText };
+    });
+
+    const ok   = parsedRows.filter(r=>r.status==='ok').length;
+    const warn = parsedRows.filter(r=>r.status==='warn').length;
+    const err  = parsedRows.filter(r=>r.status==='err').length;
+
+    document.getElementById('previewOkCount').textContent   = `${ok} พร้อม`;
+    document.getElementById('previewWarnCount').textContent  = warn ? `${warn} คำเตือน` : '';
+    document.getElementById('previewErrCount').textContent   = err  ? `${err} ข้อผิดพลาด` : '';
+
+    document.getElementById('importPreviewBody').innerHTML = parsedRows.map(r => `
+        <tr>
+            <td class="text-gray-400">${r.row}</td>
+            <td class="font-bold text-gray-700">${r.Name||'<span class="text-red-400">-</span>'}</td>
+            <td class="text-gray-500">${r.Description||'-'}</td>
+            <td class="${r.Link?'text-blue-500':'text-red-400'}">${r.Link||'ไม่มี'}</td>
+            <td class="${r.Category?'text-gray-600':'text-orange-400'}">${r.Category||'ไม่มี'}</td>
+            <td class="text-gray-400">${r.IconURL ? '<span class="text-green-500">✓ มี</span>' : '-'}</td>
+            <td class="font-bold ${r.status==='ok'?'row-ok':r.status==='warn'?'row-warn':'row-err'}">${r.statusText}</td>
+        </tr>`).join('');
+
+    document.getElementById('importPreviewSection').classList.remove('hidden');
+}
+
+// ============================================================
+// 🚀 Import to Firestore
+// ============================================================
+async function importToFirestore() {
+    const skipDup    = document.getElementById('skipDuplicates').checked;
+    const existNames = new Set(allApps.map(a => a.Name.toLowerCase()));
+    const toImport   = parsedRows.filter(r => {
+        if (r.status==='err') return false;
+        if (skipDup && existNames.has(r.Name.toLowerCase())) return false;
+        return true;
+    });
+
+    if (!toImport.length) { showAlert('error','ไม่มีข้อมูลที่จะ Import','ข้อมูลทั้งหมดมีข้อผิดพลาดหรือซ้ำกับที่มีอยู่แล้ว'); return; }
+
+    const btn = document.getElementById('importBtn');
+    btn.disabled=true; btn.textContent='กำลัง Import...';
+    showSync(`กำลัง Import ${toImport.length} รายการขึ้น Firestore...`);
+
     try {
-        await db.collection(COLLECTION_NAME).doc(id).delete();
-    } catch (err) {
-        showAlert('error', 'ลบไม่สำเร็จ', err.message);
+        // Batch write (max 500 per batch)
+        const BATCH_SIZE = 499;
+        for (let i=0; i<toImport.length; i+=BATCH_SIZE) {
+            const chunk = toImport.slice(i, i+BATCH_SIZE);
+            const batch = db.batch();
+            chunk.forEach(r => {
+                const ref  = db.collection(COLLECTION_NAME).doc();
+                batch.set(ref, {
+                    Name:        r.Name,
+                    Description: r.Description,
+                    Link:        r.Link,
+                    Category:    r.Category,
+                    IconURL:     r.IconURL,
+                    createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            });
+            await batch.commit();
+        }
+        resetImport();
+        showAlert('success',`Import สำเร็จ! 🎉`,`เพิ่ม ${toImport.length} แอปลงใน Firestore เรียบร้อยแล้ว`);
+    } catch(err) {
+        showAlert('error','Import ไม่สำเร็จ',err.message);
     } finally {
         hideSync();
+        btn.disabled=false; btn.innerHTML='🚀 Import ขึ้น Firestore';
     }
+}
+
+function resetImport() {
+    parsedRows=[];
+    document.getElementById('excelFileInput').value='';
+    document.getElementById('importPreviewSection').classList.add('hidden');
+    document.getElementById('importPreviewBody').innerHTML='';
 }
 
 // ============================================================
 // Helpers
 // ============================================================
-function showSync(msg = 'กำลังซิงค์...') {
-    document.getElementById('syncMsg').textContent = msg;
-    document.getElementById('syncOverlay').classList.remove('hidden');
-}
+function showSync(msg='กำลังซิงค์...') { document.getElementById('syncMsg').textContent=msg; document.getElementById('syncOverlay').classList.remove('hidden'); }
 function hideSync() { document.getElementById('syncOverlay').classList.add('hidden'); }
-
-function closeAlert() {
-    document.getElementById('alertModal').classList.remove('active');
-    setTimeout(() => document.getElementById('alertModal').classList.add('hidden'), 300);
-}
-
-function showAlert(type, title, message) {
-    const modal = document.getElementById('alertModal');
-    const icon  = document.getElementById('alertIcon');
-    const isOk  = type === 'success';
-    icon.className = `w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4 ${isOk ? 'bg-green-100 text-green-500' : 'bg-red-100 text-red-500'}`;
-    icon.innerHTML = isOk
-        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
-    document.getElementById('alertTitle').innerText   = title;
-    document.getElementById('alertMessage').innerText = message;
+function closeAlert() { document.getElementById('alertModal').classList.remove('active'); setTimeout(()=>document.getElementById('alertModal').classList.add('hidden'),300); }
+function showAlert(type,title,message) {
+    const modal=document.getElementById('alertModal'), icon=document.getElementById('alertIcon'), ok=type==='success';
+    icon.className=`w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4 ${ok?'bg-green-100 text-green-500':'bg-red-100 text-red-500'}`;
+    icon.innerHTML=ok
+        ?`<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
+        :`<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+    document.getElementById('alertTitle').innerText=title;
+    document.getElementById('alertMessage').innerText=message;
     modal.classList.remove('hidden');
-    setTimeout(() => modal.classList.add('active'), 10);
+    setTimeout(()=>modal.classList.add('active'),10);
 }
 </script>
 </body>

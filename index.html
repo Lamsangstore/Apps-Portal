@@ -3,197 +3,463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Hub Portal</title>
+    <title>App Hub Store</title>
 
-    <!-- Favicon: pink grid/apps emoji SVG -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fdf2f8'/%3E%3Crect x='8' y='8' width='20' height='20' rx='5' fill='%23f472b6'/%3E%3Crect x='36' y='8' width='20' height='20' rx='5' fill='%23fb923c'/%3E%3Crect x='8' y='36' width='20' height='20' rx='5' fill='%2360a5fa'/%3E%3Crect x='36' y='36' width='20' height='20' rx='5' fill='%23a78bfa'/%3E%3C/svg%3E">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <!-- SheetJS for Excel parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #fdfbf7; color: #4a5568; }
-        .ambient-bg { position:absolute;inset:0;z-index:0;opacity:.35;filter:blur(40px) saturate(150%);transform:scale(1.2) translateZ(0);will-change:opacity;transition:opacity .4s ease-out;pointer-events:none; }
-        .app-card { background:rgba(255,255,255,.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.8);box-shadow:0 10px 20px -5px rgba(0,0,0,.05);transition:transform .4s cubic-bezier(.34,1.56,.64,1),box-shadow .4s ease,background-color .4s ease;transform:translateZ(0);will-change:transform; }
-        .app-card:hover { transform:translateY(-6px) translateZ(0);background:rgba(255,255,255,.95);box-shadow:0 20px 35px -10px rgba(0,0,0,.08);border-color:#fff; }
-        .app-card:hover .ambient-bg { opacity:.7; }
-        .cat-btn-active { background-color:#1a202c;color:white;box-shadow:0 4px 15px rgba(0,0,0,.1); }
-        .cat-btn-inactive { background-color:white;color:#718096;border:1px solid #e2e8f0; }
-        .cat-btn-inactive:hover { background-color:#f7fafc;color:#4a5568;border-color:#cbd5e0; }
-        ::-webkit-scrollbar{width:8px} ::-webkit-scrollbar-track{background:#fdfbf7} ::-webkit-scrollbar-thumb{background:#cbd5e0;border-radius:10px} ::-webkit-scrollbar-thumb:hover{background:#a0aec0}
-        .modal-overlay { background-color:rgba(255,255,255,.8);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease; }
-        .modal-overlay.active { opacity:1;visibility:visible; }
-        .modal-content { transform:translateY(30px) scale(.95);transition:transform .5s cubic-bezier(.34,1.56,.64,1); }
-        .modal-overlay.active .modal-content { transform:translateY(0) scale(1); }
-        .loader { border:3px solid #f3f3f3;border-top:3px solid #f472b6;border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;display:inline-block; }
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-        .firebase-badge { background:linear-gradient(135deg,#FF6D00,#FFA000);color:white;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.1em;text-transform:uppercase; }
+        :root {
+            --bg-primary: #f5f5f7;
+            --bg-card: #ffffff;
+            --text-primary: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --text-tertiary: #86868b;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --border: #d2d2d7;
+            --border-light: #e8e8ed;
+            --pink: #ff375f;
+            --green: #30d158;
+            --orange: #ff9f0a;
+            --purple: #bf5af2;
+            --blue: #0a84ff;
+        }
 
-        /* Excel drop zone */
-        .drop-zone { border:2px dashed #e2e8f0;border-radius:16px;transition:all .3s ease;cursor:pointer; }
-        .drop-zone:hover, .drop-zone.drag-over { border-color:#f472b6;background:#fdf2f8; }
-        .drop-zone.drag-over { transform:scale(1.01); }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            margin: 0;
+        }
 
-        /* Import preview table */
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #8e8e93; }
+
+        /* ===== App Store Nav ===== */
+        .store-nav {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: rgba(245,245,247,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 0.5px solid var(--border-light);
+        }
+
+        /* ===== Section Headers ===== */
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        /* ===== Featured Banner ===== */
+        .featured-scroll {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+        }
+        .featured-scroll::-webkit-scrollbar { display: none; }
+        .featured-card {
+            scroll-snap-align: start;
+            min-width: 340px;
+            max-width: 380px;
+            flex-shrink: 0;
+            border-radius: 20px;
+            overflow: hidden;
+            background: var(--bg-card);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .featured-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        /* ===== App List Row (App Store style) ===== */
+        .app-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 0.5px solid var(--border-light);
+            cursor: pointer;
+            transition: background-color 0.15s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .app-row:hover { background-color: rgba(0,0,0,0.02); }
+        .app-row:last-child { border-bottom: none; }
+
+        .app-icon-sm {
+            width: 60px;
+            height: 60px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f0f0f5, #e8e8ed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 0.5px solid rgba(0,0,0,0.04);
+        }
+        .app-icon-sm img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .get-btn {
+            background: rgba(0,113,227,0.12);
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 14px;
+            padding: 6px 20px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+        .get-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* ===== Category Pills ===== */
+        .cat-pill {
+            padding: 8px 18px;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            border: none;
+            letter-spacing: -0.01em;
+        }
+        .cat-pill-active {
+            background: var(--accent);
+            color: white;
+        }
+        .cat-pill-inactive {
+            background: rgba(0,0,0,0.05);
+            color: var(--text-secondary);
+        }
+        .cat-pill-inactive:hover {
+            background: rgba(0,0,0,0.08);
+            color: var(--text-primary);
+        }
+
+        /* ===== Top Ranking Badge ===== */
+        .rank-badge {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* ===== Usage count badge ===== */
+        .usage-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+        }
+
+        /* ===== App Card Grid (for large cards) ===== */
+        .app-card-lg {
+            background: var(--bg-card);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            border: 0.5px solid var(--border-light);
+        }
+        .app-card-lg:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            transform: translateY(20px) scale(0.97);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        /* ===== Loader ===== */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+
+        .firebase-badge { background: linear-gradient(135deg,#FF6D00,#FFA000);color:white;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.1em;text-transform:uppercase; }
+
+        /* ===== Drop Zone ===== */
+        .drop-zone { border:2px dashed var(--border);border-radius:16px;transition:all .3s ease;cursor:pointer; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color:var(--accent);background:rgba(0,113,227,0.04); }
+
+        /* ===== Preview Table ===== */
         .preview-table { font-size:12px; }
         .preview-table th { background:#f7fafc;padding:6px 10px;text-align:left;font-weight:700;color:#718096;border-bottom:1px solid #e2e8f0;white-space:nowrap; }
         .preview-table td { padding:5px 10px;border-bottom:1px solid #f0f0f0;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-        .preview-table tr:hover td { background:#fffbfe; }
-        .row-ok   { color:#10b981; }
-        .row-warn { color:#f59e0b; }
-        .row-err  { color:#ef4444; }
+        .preview-table tr:hover td { background:#f8f9fa; }
+        .row-ok { color:#30d158; } .row-warn { color:#ff9f0a; } .row-err { color:#ff375f; }
 
-        /* Tab */
-        .tab-btn { padding:8px 18px;border-radius:12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;transition:all .2s; }
-        .tab-btn.active { background:#1a202c;color:white; }
-        .tab-btn:not(.active) { color:#718096; }
-        .tab-btn:not(.active):hover { background:#f7fafc;color:#4a5568; }
+        /* ===== Tabs ===== */
+        .tab-btn { padding:8px 18px;border-radius:12px;font-size:13px;font-weight:600;transition:all .2s;cursor:pointer;border:none;background:transparent; }
+        .tab-btn.active { background:var(--text-primary);color:white; }
+        .tab-btn:not(.active) { color:var(--text-secondary); }
+        .tab-btn:not(.active):hover { background:rgba(0,0,0,0.05);color:var(--text-primary); }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 640px) {
+            .featured-card { min-width: 85vw; max-width: 85vw; }
+            .section-header { font-size: 1.3rem; }
+        }
+
+        /* ===== Shimmer loading ===== */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* ===== Trending flame ===== */
+        .trending-fire {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--pink);
+            background: rgba(255,55,95,0.08);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
     </style>
 </head>
-<body class="min-h-screen">
-<div class="max-w-7xl mx-auto px-4 md:px-6 py-10">
+<body>
 
-    <!-- Header -->
-    <header class="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-12 border-b border-gray-200 pb-12">
-        <div class="flex items-center gap-6 md:gap-8">
-            <div class="w-20 h-20 md:w-28 md:h-28 bg-white rounded-3xl flex items-center justify-center shadow-xl overflow-hidden border-4 border-white group shrink-0 hover:scale-105 transition-transform duration-500">
-                <img src="https://i.postimg.cc/KY2KcC5g/New-folder-9.jpg" alt="Logo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+<!-- ===== STICKY NAV ===== -->
+<nav class="store-nav">
+    <div class="max-w-6xl mx-auto px-4 md:px-6">
+        <div class="flex items-center justify-between h-14 md:h-16">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl overflow-hidden shadow-sm border border-gray-200/60">
+                    <img src="https://i.postimg.cc/KY2KcC5g/New-folder-9.jpg" alt="Logo" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-extrabold tracking-tight leading-none" style="letter-spacing:-0.03em;">App Store</h1>
+                </div>
             </div>
-            <div>
-                <h1 class="text-3xl md:text-5xl font-bold text-gray-800 tracking-tight uppercase italic mb-1">App <span class="text-pink-400">Directory</span></h1>
-                <p class="text-gray-400 text-xs md:text-base tracking-[0.2em] font-light flex items-center gap-2">
-                    PASTEL COLLECTION &amp; TOOLS <span class="firebase-badge">🔥 Firestore</span>
-                </p>
+            <div class="flex items-center gap-3">
+                <div class="relative hidden sm:block">
+                    <input type="text" id="searchInput" onkeyup="filterApps()" placeholder="ค้นหาแอป..."
+                        class="w-56 md:w-72 pl-9 pr-4 py-2 rounded-xl bg-black/5 text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/30 focus:bg-white focus:shadow-sm outline-none transition-all border-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <button onclick="openPasswordModal()" class="w-9 h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors" title="Manage Data">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
             </div>
         </div>
-        <div class="flex flex-col md:flex-row gap-4 w-full xl:w-auto items-stretch md:items-center">
-            <div class="relative w-full md:w-80 lg:w-96">
-                <input type="text" id="searchInput" onkeyup="filterApps()" placeholder="ค้นหาแอปน่ารักๆ..."
-                    class="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-gray-200 text-gray-600 placeholder-gray-400 focus:ring-2 focus:ring-pink-200 focus:border-pink-300 outline-none transition-all text-lg shadow-sm">
-                <span class="absolute left-4 top-5 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                </span>
+        <!-- Mobile search -->
+        <div class="sm:hidden pb-3">
+            <div class="relative">
+                <input type="text" id="searchInputMobile" onkeyup="filterAppsMobile()" placeholder="ค้นหาแอป..."
+                    class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-black/5 text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/30 focus:bg-white outline-none transition-all border-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <button onclick="openPasswordModal()" class="flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-pink-500 hover:border-pink-200 hover:shadow-lg hover:shadow-pink-100 transition-all group whitespace-nowrap shadow-sm cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                <span class="text-sm font-bold uppercase tracking-wider">Manage Data</span>
-            </button>
         </div>
-    </header>
+    </div>
+</nav>
 
-    <div id="categoryBar" class="flex flex-wrap gap-3 md:gap-4 mb-10"></div>
+<main class="max-w-6xl mx-auto px-4 md:px-6 pb-20">
 
-    <div id="mainLoading" class="flex flex-col items-center justify-center py-20">
-        <div class="loader mb-4" style="width:40px;height:40px;border-width:4px;"></div>
-        <p class="text-gray-400 uppercase tracking-widest text-sm font-bold">กำลังเชื่อมต่อ Firebase...</p>
+    <!-- Loading -->
+    <div id="mainLoading" class="flex flex-col items-center justify-center py-32">
+        <div class="loader mb-4" style="width:36px;height:36px;border-width:3px;"></div>
+        <p class="text-gray-400 text-sm font-medium">กำลังเชื่อมต่อ...</p>
     </div>
 
-    <div id="appGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10 pb-20 hidden"></div>
-    <div id="emptyState" class="hidden text-center py-32 bg-white/50 rounded-3xl border border-dashed border-gray-300">
-        <p class="text-5xl mb-4">🌸</p>
-        <p class="text-gray-400 uppercase tracking-widest text-lg">No apps found</p>
-    </div>
+    <!-- Content Container (hidden until loaded) -->
+    <div id="contentContainer" class="hidden">
 
-    <footer class="mt-12 pt-12 border-t border-gray-200 text-center pb-8">
-        <p class="text-gray-400 text-xs uppercase tracking-[0.3em]">© 2026 Crafted with Love • Powered by 🔥 Firebase Firestore</p>
-    </footer>
-</div>
+        <!-- ===== FEATURED / TOP APPS BANNER ===== -->
+        <section class="mt-6 mb-8" id="featuredSection">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="section-header">🔥 แอปยอดนิยม</h2>
+                <span class="text-sm font-medium text-gray-400">ใช้บ่อยที่สุด</span>
+            </div>
+            <div class="featured-scroll" id="featuredScroll"></div>
+        </section>
+
+        <!-- ===== CATEGORY PILLS ===== -->
+        <section class="mb-2">
+            <div class="flex gap-2 overflow-x-auto pb-2" id="categoryBar" style="-webkit-overflow-scrolling:touch;">
+            </div>
+        </section>
+
+        <!-- ===== TRENDING NOW ===== -->
+        <section class="mb-8" id="trendingSection">
+            <div class="flex items-center justify-between mb-3 mt-6">
+                <h2 class="section-header">📈 กำลังมาแรง</h2>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden px-4" id="trendingList">
+            </div>
+        </section>
+
+        <!-- ===== ALL APPS (Grid) ===== -->
+        <section id="allAppsSection">
+            <div class="flex items-center justify-between mb-4 mt-6">
+                <h2 class="section-header" id="allAppsTitle">ทั้งหมด</h2>
+                <span class="text-sm text-gray-400 font-medium" id="appCountLabel">0 แอป</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="appGrid"></div>
+        </section>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-24">
+            <p class="text-5xl mb-4">🔍</p>
+            <p class="text-gray-400 text-base font-medium">ไม่พบแอปที่ค้นหา</p>
+        </div>
+
+    </div>
+</main>
+
+<footer class="border-t border-gray-200 py-6 text-center">
+    <p class="text-xs text-gray-400 font-medium">© 2026 App Hub Store • Powered by 🔥 Firebase</p>
+</footer>
+
 
 <!-- ===== PASSWORD MODAL ===== -->
 <div id="passwordModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4">
-    <div class="modal-content bg-white p-8 rounded-3xl shadow-2xl border border-pink-100 max-w-sm w-full relative">
-        <button onclick="closeModals()" class="absolute top-4 right-4 text-gray-400 hover:text-pink-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    <div class="modal-content bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full relative">
+        <button onclick="closeModals()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        <div class="w-16 h-16 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-pink-400">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
         </div>
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">Admin Access</h2>
-        <p class="text-center text-gray-500 text-sm mb-6">กรุณาใส่รหัสผ่านเพื่อจัดการแอปพลิเคชัน</p>
+        <h2 class="text-xl font-bold text-center mb-1">Admin Access</h2>
+        <p class="text-center text-gray-500 text-sm mb-5">กรุณาใส่รหัสผ่านเพื่อจัดการแอป</p>
         <input type="password" id="adminPassword" placeholder="รหัสผ่าน..."
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 focus:outline-none text-center text-lg tracking-widest mb-4">
-        <p id="passwordError" class="text-red-400 text-sm text-center hidden mb-4">รหัสผ่านไม่ถูกต้อง!</p>
-        <button onclick="checkPassword()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm">Login</button>
+            class="w-full px-4 py-3 rounded-xl bg-gray-100 border-none focus:ring-2 focus:ring-blue-500/40 outline-none text-center text-lg tracking-widest mb-3">
+        <p id="passwordError" class="text-red-500 text-sm text-center hidden mb-3">รหัสผ่านไม่ถูกต้อง</p>
+        <button onclick="checkPassword()" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm">เข้าสู่ระบบ</button>
     </div>
 </div>
 
 <!-- ===== ADMIN MODAL ===== -->
 <div id="adminModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center px-2 py-4 md:px-4 md:py-10 overflow-y-auto">
-    <div class="modal-content bg-white rounded-3xl shadow-2xl border border-pink-100 max-w-5xl w-full my-auto flex flex-col" style="max-height:95vh;">
-
-        <!-- Modal Header -->
-        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl shrink-0">
-            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Manage Data
-                <span class="firebase-badge">🔥 Firestore</span>
+    <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-5xl w-full my-auto flex flex-col" style="max-height:95vh;">
+        <div class="p-5 border-b border-gray-100 flex justify-between items-center shrink-0">
+            <h2 class="text-lg font-bold flex items-center gap-2">
+                ⚙️ Manage Data <span class="firebase-badge">🔥 Firestore</span>
             </h2>
-            <button onclick="closeModals()" class="p-2 bg-white rounded-full hover:bg-pink-50 text-gray-400 hover:text-pink-500 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button onclick="closeModals()" class="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-
-        <!-- Tabs -->
-        <div class="flex gap-2 px-6 pt-5 shrink-0">
+        <div class="flex gap-2 px-6 pt-4 shrink-0">
             <button class="tab-btn active" id="tabManual" onclick="switchTab('manual')">✏️ เพิ่ม / แก้ไข</button>
             <button class="tab-btn" id="tabImport" onclick="switchTab('import')">📊 นำเข้า Excel</button>
-            <button class="tab-btn" id="tabList"   onclick="switchTab('list')">
-                📋 รายการ (<span id="appCountTab">0</span>)
-            </button>
+            <button class="tab-btn" id="tabList" onclick="switchTab('list')">📋 รายการ (<span id="appCountTab">0</span>)</button>
         </div>
-
-        <!-- Body -->
         <div class="overflow-y-auto flex-1 relative">
-            <!-- Sync Overlay -->
-            <div id="syncOverlay" class="absolute inset-0 bg-white/85 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden rounded-b-3xl">
+            <div id="syncOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center hidden rounded-b-2xl">
                 <div class="loader mb-3"></div>
-                <p id="syncMsg" class="text-orange-500 font-bold text-sm tracking-widest uppercase">กำลังซิงค์...</p>
+                <p id="syncMsg" class="text-blue-600 font-semibold text-sm">กำลังซิงค์...</p>
             </div>
 
-            <!-- TAB: Manual Add/Edit -->
+            <!-- TAB: Manual -->
             <div id="panelManual" class="p-6">
-                <h3 id="formTitle" class="font-bold text-gray-700 mb-5 uppercase tracking-wider text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
+                <h3 id="formTitle" class="font-bold text-gray-700 mb-5 text-sm border-b pb-2">เพิ่มแอปพลิเคชันใหม่</h3>
                 <form id="addAppForm" onsubmit="saveApp(event)" class="space-y-4 max-w-xl">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อ App *</label>
-                            <input type="text" id="appName" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">ชื่อ App *</label>
+                            <input type="text" id="appName" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/30 outline-none text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">หมวดหมู่ *</label>
-                            <input list="categoryList" id="appCategory" required autocomplete="off" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">หมวดหมู่ *</label>
+                            <input list="categoryList" id="appCategory" required autocomplete="off" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/30 outline-none text-sm">
                             <datalist id="categoryList"></datalist>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">รายละเอียด</label>
-                        <textarea id="appDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none resize-none"></textarea>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">รายละเอียด</label>
+                        <textarea id="appDesc" rows="2" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/30 outline-none resize-none text-sm"></textarea>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ลิงก์ URL *</label>
-                        <input type="url" id="appLink" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">ลิงก์ URL *</label>
+                        <input type="url" id="appLink" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/30 outline-none text-sm">
                     </div>
                     <div class="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">ไอคอน — URL รูปภาพ</label>
+                        <label class="block text-xs font-semibold text-gray-500 mb-2">ไอคอน — URL รูปภาพ</label>
                         <input type="url" id="appIconUrl" placeholder="https://example.com/icon.png"
-                            class="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none">
+                            class="w-full px-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-blue-500/30 outline-none text-sm">
                         <div id="iconPreviewWrap" class="hidden mt-3 flex items-center gap-3">
                             <img id="iconPreview" src="" alt="preview" class="w-12 h-12 rounded-xl object-cover border-2 border-gray-200">
                             <p class="text-xs text-gray-400">ตัวอย่างไอคอน</p>
                         </div>
-                        <p class="text-[10px] text-gray-400 mt-2">ใช้ link จาก postimg, imgur หรือโฮสรูปภาพอื่นๆ ได้เลยครับ</p>
                     </div>
                     <div class="flex gap-3 pt-1">
                         <button type="submit" id="submitBtn"
-                            class="flex-1 bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg">
+                            class="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-sm">
                             + บันทึกขึ้น Firestore
                         </button>
                         <button type="button" id="cancelEditBtn" onclick="cancelEdit()"
-                            class="hidden bg-gray-200 text-gray-600 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors uppercase tracking-wider text-sm">
+                            class="hidden bg-gray-200 text-gray-600 font-semibold py-3 px-6 rounded-xl hover:bg-gray-300 transition-colors text-sm">
                             ยกเลิก
                         </button>
                     </div>
@@ -202,106 +468,73 @@
 
             <!-- TAB: Import Excel -->
             <div id="panelImport" class="p-6 hidden">
-                <!-- Step 1: Download template -->
                 <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <p class="font-bold text-green-700 text-sm mb-0.5">📥 Step 1 — ดาวน์โหลดไฟล์ต้นแบบ</p>
-                        <p class="text-green-600 text-xs">ไฟล์ Excel พร้อมหัวคอลัมน์และข้อมูลตัวอย่าง 3 แถว</p>
+                        <p class="text-green-600 text-xs">ไฟล์ Excel พร้อมหัวคอลัมน์และข้อมูลตัวอย่าง</p>
                     </div>
                     <div class="flex gap-2 shrink-0">
-                        <button onclick="downloadTemplate(false)"
-                            class="flex items-center gap-2 bg-white border border-green-300 text-green-700 font-bold px-4 py-2 rounded-xl hover:bg-green-50 transition-colors text-sm shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            ไฟล์เปล่า
-                        </button>
-                        <button onclick="downloadTemplate(true)"
-                            class="flex items-center gap-2 bg-green-500 text-white font-bold px-4 py-2 rounded-xl hover:bg-green-600 transition-colors text-sm shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            + ตัวอย่าง 3 แถว
-                        </button>
+                        <button onclick="downloadTemplate(false)" class="flex items-center gap-2 bg-white border border-green-300 text-green-700 font-bold px-4 py-2 rounded-xl hover:bg-green-50 transition-colors text-sm">ไฟล์เปล่า</button>
+                        <button onclick="downloadTemplate(true)" class="flex items-center gap-2 bg-green-500 text-white font-bold px-4 py-2 rounded-xl hover:bg-green-600 transition-colors text-sm">+ ตัวอย่าง</button>
                     </div>
                 </div>
-
-                <!-- Step 2: Upload -->
-                <p class="font-bold text-gray-700 text-sm mb-3 uppercase tracking-wider">📤 Step 2 — อัปโหลดไฟล์ Excel</p>
+                <p class="font-bold text-gray-700 text-sm mb-3">📤 Step 2 — อัปโหลดไฟล์ Excel</p>
                 <div id="dropZone" class="drop-zone p-10 text-center mb-5"
                     onclick="document.getElementById('excelFileInput').click()"
                     ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
                     <div class="text-4xl mb-3">📊</div>
-                    <p class="font-bold text-gray-600 mb-1">คลิกเพื่อเลือกไฟล์ หรือลากมาวางที่นี่</p>
-                    <p class="text-gray-400 text-sm">รองรับไฟล์ .xlsx และ .xls</p>
+                    <p class="font-semibold text-gray-600 mb-1">คลิกเพื่อเลือกไฟล์ หรือลากมาวางที่นี่</p>
+                    <p class="text-gray-400 text-sm">รองรับ .xlsx และ .xls</p>
                     <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelFile(event)">
                 </div>
-
-                <!-- Step 3: Preview -->
                 <div id="importPreviewSection" class="hidden">
                     <div class="flex items-center justify-between mb-3">
-                        <p class="font-bold text-gray-700 text-sm uppercase tracking-wider">👀 Step 3 — ตรวจสอบข้อมูลก่อน Import</p>
+                        <p class="font-bold text-gray-700 text-sm">👀 Step 3 — ตรวจสอบข้อมูล</p>
                         <div class="flex items-center gap-3 text-xs">
                             <span class="row-ok font-bold" id="previewOkCount">0 พร้อม</span>
                             <span class="row-warn font-bold" id="previewWarnCount"></span>
                             <span class="row-err font-bold" id="previewErrCount"></span>
                         </div>
                     </div>
-
                     <div class="overflow-x-auto rounded-xl border border-gray-200 mb-5">
                         <table class="preview-table w-full">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>ชื่อ App</th>
-                                    <th>รายละเอียด</th>
-                                    <th>ลิงก์ URL</th>
-                                    <th>หมวดหมู่</th>
-                                    <th>Icon URL</th>
-                                    <th>สถานะ</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>#</th><th>ชื่อ App</th><th>รายละเอียด</th><th>ลิงก์</th><th>หมวดหมู่</th><th>Icon</th><th>สถานะ</th></tr></thead>
                             <tbody id="importPreviewBody"></tbody>
                         </table>
                     </div>
-
-                    <!-- Import options -->
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
-                            <input type="checkbox" id="skipDuplicates" checked class="w-4 h-4 rounded text-pink-400 focus:ring-pink-300">
-                            <span class="text-gray-600">ข้ามแถวที่มีชื่อซ้ำกับใน Firestore</span>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" id="skipDuplicates" checked class="w-4 h-4 rounded text-blue-500 focus:ring-blue-300">
+                            <span class="text-gray-600">ข้ามแถวที่มีชื่อซ้ำ</span>
                         </label>
                         <div class="flex gap-3">
-                            <button onclick="resetImport()"
-                                class="bg-gray-100 text-gray-600 font-bold px-5 py-2.5 rounded-xl hover:bg-gray-200 transition-colors text-sm">
-                                รีเซ็ต
-                            </button>
-                            <button id="importBtn" onclick="importToFirestore()"
-                                class="bg-pink-400 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-pink-500 transition-colors text-sm shadow-md hover:shadow-lg flex items-center gap-2">
-                                🚀 Import ขึ้น Firestore
-                            </button>
+                            <button onclick="resetImport()" class="bg-gray-100 text-gray-600 font-bold px-5 py-2.5 rounded-xl hover:bg-gray-200 text-sm">รีเซ็ต</button>
+                            <button id="importBtn" onclick="importToFirestore()" class="bg-blue-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 text-sm shadow-sm">🚀 Import ขึ้น Firestore</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB: App List -->
+            <!-- TAB: List -->
             <div id="panelList" class="p-6 hidden">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-gray-700 uppercase tracking-wider text-sm">รายการแอปทั้งหมด (<span id="appCount">0</span>)</h3>
+                    <h3 class="font-bold text-gray-700 text-sm">รายการแอปทั้งหมด (<span id="appCount">0</span>)</h3>
                     <input type="text" id="adminSearch" oninput="renderAdminList()" placeholder="ค้นหา..."
-                        class="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-pink-200 outline-none w-40">
+                        class="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-blue-200 outline-none w-40">
                 </div>
-                <div class="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1" id="adminAppList"></div>
+                <div class="space-y-2 max-h-[55vh] overflow-y-auto pr-1" id="adminAppList"></div>
             </div>
-
         </div>
     </div>
 </div>
 
 <!-- ===== ALERT MODAL ===== -->
 <div id="alertModal" class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center px-4 hidden">
-    <div class="modal-content bg-white p-6 rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full text-center">
+    <div class="modal-content bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full text-center">
         <div id="alertIcon" class="w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4"></div>
-        <h3 id="alertTitle" class="text-lg font-bold text-gray-800 mb-1"></h3>
+        <h3 id="alertTitle" class="text-lg font-bold mb-1"></h3>
         <p id="alertMessage" class="text-gray-500 text-sm mb-5"></p>
-        <button onclick="closeAlert()" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-xl text-sm font-bold hover:bg-gray-200">ตกลง</button>
+        <button onclick="closeAlert()" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-xl text-sm font-semibold hover:bg-gray-200">ตกลง</button>
     </div>
 </div>
 
@@ -319,28 +552,56 @@ const firebaseConfig = {
 };
 const ADMIN_PASSWORD  = '03062534';
 const COLLECTION_NAME = 'apps';
-
-// Excel column mapping (case-insensitive)
 const COL_MAP = { name:'Name', description:'Description', link:'Link', category:'Category', iconurl:'IconURL', icon:'IconURL' };
 
-// State
 let db;
 let allApps        = [];
 let activeCategory = 'ทั้งหมด';
 let editingAppId   = null;
-let parsedRows     = []; // Excel parsed rows
+let parsedRows     = [];
+let clickCounts    = {};  // { appId: count }
+
+// ============================================================
+// Click Counter (localStorage) — frequently used apps
+// ============================================================
+function loadClickCounts() {
+    try {
+        clickCounts = JSON.parse(localStorage.getItem('appClickCounts') || '{}');
+    } catch(e) { clickCounts = {}; }
+}
+function saveClickCounts() {
+    localStorage.setItem('appClickCounts', JSON.stringify(clickCounts));
+}
+function incrementClick(appId) {
+    clickCounts[appId] = (clickCounts[appId] || 0) + 1;
+    saveClickCounts();
+}
+function getClickCount(appId) {
+    return clickCounts[appId] || 0;
+}
+function getAppsSortedByUsage() {
+    return [...allApps].sort((a, b) => getClickCount(b.id) - getClickCount(a.id));
+}
+function getTopApps(n) {
+    return getAppsSortedByUsage().filter(a => getClickCount(a.id) > 0).slice(0, n);
+}
+function getTrendingApps() {
+    // Apps with any clicks, sorted by usage, top 6
+    return getAppsSortedByUsage().filter(a => getClickCount(a.id) > 0).slice(0, 6);
+}
 
 // ============================================================
 // Init
 // ============================================================
 window.onload = () => {
+    loadClickCounts();
     try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         subscribeToApps();
     } catch (e) {
         document.getElementById('mainLoading').innerHTML =
-            `<p class="text-red-500 font-bold text-center">❌ Firebase Error: ${e.message}</p>`;
+            `<p class="text-red-500 font-semibold text-center py-8">❌ Firebase Error: ${e.message}</p>`;
     }
 };
 
@@ -355,11 +616,11 @@ function subscribeToApps() {
             IconURL:     String(doc.data().IconURL      || ''),
         })).filter(a => a.Name.trim() !== '');
         document.getElementById('mainLoading').classList.add('hidden');
+        document.getElementById('contentContainer').classList.remove('hidden');
         refreshUI();
     }, err => {
         document.getElementById('mainLoading').innerHTML =
-            `<p class="text-red-500 font-bold text-center">❌ ${err.message}<br>
-             <span class="text-gray-400 text-xs">ตรวจสอบ Firestore Security Rules</span></p>`;
+            `<p class="text-red-500 font-semibold text-center py-8">❌ ${err.message}</p>`;
     });
 }
 
@@ -367,62 +628,202 @@ function subscribeToApps() {
 // UI
 // ============================================================
 function refreshUI() {
-    renderCategories(); filterApps(); updateDatalist(); renderAdminList();
+    renderCategories();
+    renderFeatured();
+    renderTrending();
+    filterApps();
+    updateDatalist();
+    renderAdminList();
     document.getElementById('appCountTab').innerText = allApps.length;
     document.getElementById('appCount').innerText    = allApps.length;
 }
 
+// ===== FEATURED BANNER (Top 5 most used) =====
+function renderFeatured() {
+    const top = getTopApps(5);
+    const section = document.getElementById('featuredSection');
+    const scroll = document.getElementById('featuredScroll');
+
+    if (top.length === 0) {
+        // If no clicks yet, show newest apps
+        const newest = [...allApps].reverse().slice(0, 5);
+        if (newest.length === 0) { section.classList.add('hidden'); return; }
+        section.classList.remove('hidden');
+        document.querySelector('#featuredSection .section-header').textContent = '✨ แอปใหม่ล่าสุด';
+        scroll.innerHTML = newest.map(app => makeFeaturedCard(app)).join('');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    document.querySelector('#featuredSection .section-header').textContent = '🔥 แอปยอดนิยม';
+    scroll.innerHTML = top.map(app => makeFeaturedCard(app)).join('');
+}
+
+function makeFeaturedCard(app) {
+    const link = normalizeLink(app.Link);
+    const fb = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=007AFF&color=fff&size=128&bold=true`;
+    const count = getClickCount(app.id);
+    const gradients = [
+        'linear-gradient(135deg,#667eea,#764ba2)',
+        'linear-gradient(135deg,#f093fb,#f5576c)',
+        'linear-gradient(135deg,#4facfe,#00f2fe)',
+        'linear-gradient(135deg,#43e97b,#38f9d7)',
+        'linear-gradient(135deg,#fa709a,#fee140)',
+    ];
+    const grad = gradients[Math.abs(hashCode(app.id)) % gradients.length];
+
+    return `
+    <div class="featured-card" onclick="onAppClick('${app.id}','${escAttr(link)}')">
+        <div style="height:140px;background:${grad};position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.15);"></div>
+            ${app.IconURL ? `<img src="${app.IconURL}" style="position:absolute;right:16px;bottom:16px;width:56px;height:56px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.25);border:2px solid rgba(255,255,255,0.3);object-fit:cover;" onerror="this.style.display='none'">` : ''}
+            <div style="position:absolute;left:16px;bottom:16px;">
+                <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">${app.Category || 'App'}</p>
+                <h3 style="color:white;font-size:18px;font-weight:800;line-height:1.2;max-width:200px;">${app.Name}</h3>
+            </div>
+        </div>
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <p style="font-size:13px;color:var(--text-secondary);font-weight:500;line-clamp:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${app.Description || 'เปิดใช้งาน'}</p>
+            </div>
+            ${count > 0 ? `<span class="usage-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                ${count} ครั้ง
+            </span>` : '<span class="get-btn" style="font-size:12px;padding:4px 14px;">เปิด</span>'}
+        </div>
+    </div>`;
+}
+
+// ===== TRENDING (Top 6 with clicks) =====
+function renderTrending() {
+    const trending = getTrendingApps();
+    const section = document.getElementById('trendingSection');
+    const list = document.getElementById('trendingList');
+
+    if (trending.length < 2) {
+        section.classList.add('hidden');
+        return;
+    }
+    section.classList.remove('hidden');
+
+    list.innerHTML = trending.map((app, i) => {
+        const link = normalizeLink(app.Link);
+        const fb = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=f0f0f5&color=1d1d1f&size=64&bold=true`;
+        const count = getClickCount(app.id);
+        return `
+        <a href="javascript:void(0)" onclick="onAppClick('${app.id}','${escAttr(link)}')" class="app-row">
+            <span class="rank-badge">${i+1}</span>
+            <div class="app-icon-sm">
+                ${app.IconURL ? `<img src="${app.IconURL}" onerror="this.src='${fb}'">` : `<span style="font-size:22px;font-weight:800;color:var(--text-tertiary);">${app.Name.charAt(0)}</span>`}
+            </div>
+            <div style="flex:1;min-width:0;">
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${app.Name}</p>
+                <p style="font-size:12px;color:var(--text-tertiary);font-weight:500;">${app.Category || 'App'}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                ${count > 2 ? `<span class="trending-fire">🔥 ${count}</span>` : `<span class="usage-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>${count}</span>`}
+                <span class="get-btn">เปิด</span>
+            </div>
+        </a>`;
+    }).join('');
+}
+
+// ===== CATEGORIES =====
 function renderCategories() {
     const cats = ['ทั้งหมด', ...new Set(allApps.map(a => a.Category).filter(Boolean))];
     document.getElementById('categoryBar').innerHTML = cats.map(cat => `
         <button onclick="filterByCategory('${cat}')"
-            class="cat-btn px-6 md:px-8 py-3 rounded-2xl text-xs md:text-sm font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory===cat?'cat-btn-active':'cat-btn-inactive'}">
+            class="cat-pill ${activeCategory===cat?'cat-pill-active':'cat-pill-inactive'}">
             ${cat}</button>`).join('');
 }
 
+// ===== ALL APPS GRID =====
 function renderApps(apps) {
-    const grid=document.getElementById('appGrid'), empty=document.getElementById('emptyState');
-    if (!apps.length) { grid.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-    grid.classList.remove('hidden'); empty.classList.add('hidden');
-    grid.innerHTML = apps.map(app => {
-        let link = (app.Link||'').trim()||'#';
-        if (link!=='#' && !link.startsWith('http') && !link.startsWith('mailto:')) link='https://'+link;
-        const target=link!=='#'?'target="_blank"':'';
-        const fb=`https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=ffd6e0&color=fff&size=128`;
+    const grid = document.getElementById('appGrid');
+    const empty = document.getElementById('emptyState');
+
+    if (!apps.length) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+
+    // Sort: most clicked first, then by name
+    const sorted = [...apps].sort((a, b) => {
+        const diff = getClickCount(b.id) - getClickCount(a.id);
+        if (diff !== 0) return diff;
+        return a.Name.localeCompare(b.Name, 'th');
+    });
+
+    document.getElementById('appCountLabel').textContent = `${sorted.length} แอป`;
+
+    grid.innerHTML = sorted.map(app => {
+        const link = normalizeLink(app.Link);
+        const fb = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=f0f0f5&color=1d1d1f&size=128&bold=true`;
+        const count = getClickCount(app.id);
+
         return `
-        <a href="${link}" ${target} class="app-card group p-6 rounded-3xl relative overflow-hidden h-full flex flex-col">
-            <div class="ambient-bg">${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:`<div class="w-full h-full bg-gradient-to-br from-pink-200 to-blue-200"></div>`}</div>
-            <div class="relative z-10 flex flex-col h-full">
-                <div class="flex flex-col gap-5 mb-4">
-                    <div class="flex items-start justify-between">
-                        <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white/90 flex items-center justify-center border border-white/50 shadow-sm group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 overflow-hidden shrink-0">
-                            ${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.src='${fb}'">`:`<div class="text-pink-300 font-bold text-4xl select-none">${app.Name.charAt(0)}</div>`}
-                        </div>
-                        <span class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-xl mt-1 border border-white">${app.Category||'General'}</span>
+        <a href="javascript:void(0)" onclick="onAppClick('${app.id}','${escAttr(link)}')" class="app-card-lg">
+            <div style="padding:20px 20px 0;">
+                <div style="display:flex;align-items:flex-start;gap:14px;">
+                    <div class="app-icon-sm" style="width:64px;height:64px;border-radius:16px;">
+                        ${app.IconURL ? `<img src="${app.IconURL}" onerror="this.src='${fb}'">` : `<span style="font-size:24px;font-weight:800;color:var(--text-tertiary);">${app.Name.charAt(0)}</span>`}
                     </div>
-                    <h3 class="font-bold text-gray-800 text-xl group-hover:text-pink-500 transition-colors uppercase tracking-tight break-words leading-tight pl-1">${app.Name}</h3>
+                    <div style="flex:1;min-width:0;">
+                        <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${app.Name}</h3>
+                        <p style="font-size:12px;color:var(--text-tertiary);font-weight:500;margin-bottom:4px;">${app.Category || 'App'}</p>
+                        ${count > 0 ? `<span class="usage-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> ใช้แล้ว ${count} ครั้ง</span>` : ''}
+                    </div>
+                    <span class="get-btn" style="margin-top:4px;">เปิด</span>
                 </div>
-                <div class="flex-grow pl-1"><p class="text-sm text-gray-600 leading-relaxed mb-6 font-medium break-words">${app.Description}</p></div>
-                <div class="mt-auto pt-4 border-t border-gray-200/50 flex items-center justify-center text-xs font-black uppercase tracking-[0.25em] text-gray-400 group-hover:text-pink-500 transition-all">Open App</div>
+            </div>
+            <div style="padding:12px 20px 16px;">
+                <p style="font-size:13px;color:var(--text-secondary);font-weight:400;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${app.Description || 'แตะเพื่อเปิดใช้งาน'}</p>
             </div>
         </a>`;
     }).join('');
 }
 
 function filterApps() {
-    const term = document.getElementById('searchInput').value.toLowerCase();
+    const term = (document.getElementById('searchInput').value || document.getElementById('searchInputMobile')?.value || '').toLowerCase();
     renderApps(allApps.filter(a =>
         (a.Name+a.Description+a.Category).toLowerCase().includes(term) &&
-        (activeCategory==='ทั้งหมด'||a.Category===activeCategory)
+        (activeCategory==='ทั้งหมด' || a.Category===activeCategory)
     ));
+}
+function filterAppsMobile() {
+    document.getElementById('searchInput').value = document.getElementById('searchInputMobile').value;
+    filterApps();
 }
 function filterByCategory(cat) { activeCategory=cat; refreshUI(); }
 
+// ===== Click handler =====
+function onAppClick(appId, link) {
+    incrementClick(appId);
+    // Re-render trending/featured after click
+    renderFeatured();
+    renderTrending();
+    // Re-sort all apps
+    filterApps();
+    // Open link
+    if (link && link !== '#') {
+        window.open(link, '_blank');
+    }
+}
+
+// ===== Helpers =====
+function normalizeLink(link) {
+    link = (link || '').trim() || '#';
+    if (link !== '#' && !link.startsWith('http') && !link.startsWith('mailto:')) link = 'https://' + link;
+    return link;
+}
+function escAttr(s) { return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+function hashCode(s) { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return h; }
 function updateDatalist() {
     document.getElementById('categoryList').innerHTML =
         [...new Set(allApps.map(a=>a.Category).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
 }
 
+// ============================================================
+// Admin List
+// ============================================================
 function renderAdminList() {
     const list  = document.getElementById('adminAppList');
     const term  = (document.getElementById('adminSearch')?.value||'').toLowerCase();
@@ -432,7 +833,9 @@ function renderAdminList() {
     document.getElementById('appCount').innerText    = allApps.length;
     document.getElementById('appCountTab').innerText = allApps.length;
     if (!shown.length) { list.innerHTML=`<p class="text-center text-sm text-gray-400 py-8 border border-dashed rounded-xl">ไม่พบข้อมูล</p>`; return; }
-    list.innerHTML = shown.map(app=>`
+    list.innerHTML = shown.map(app=>{
+        const count = getClickCount(app.id);
+        return `
         <div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-sm transition-shadow">
             <div class="flex items-center gap-3 overflow-hidden">
                 <div class="w-9 h-9 rounded-lg bg-white shrink-0 overflow-hidden border border-gray-200">
@@ -440,7 +843,7 @@ function renderAdminList() {
                 </div>
                 <div class="truncate">
                     <p class="font-bold text-sm text-gray-800 truncate">${app.Name}</p>
-                    <p class="text-[10px] text-gray-500 uppercase">${app.Category}</p>
+                    <p class="text-[10px] text-gray-500">${app.Category} ${count > 0 ? `· ใช้แล้ว ${count} ครั้ง` : ''}</p>
                 </div>
             </div>
             <div class="flex gap-1 shrink-0">
@@ -451,7 +854,8 @@ function renderAdminList() {
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
                 </button>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 // ============================================================
@@ -503,7 +907,7 @@ function editApp(id) {
     switchTab('manual');
     document.getElementById('formTitle').innerText  = '✏️ แก้ไขแอปพลิเคชัน';
     document.getElementById('submitBtn').innerHTML  = '💾 บันทึกการแก้ไข';
-    document.getElementById('submitBtn').className  = 'flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition-colors uppercase tracking-wider text-sm shadow-md';
+    document.getElementById('submitBtn').className  = 'flex-1 bg-orange-500 text-white font-semibold py-3 rounded-xl hover:bg-orange-600 transition-colors text-sm shadow-sm';
     document.getElementById('cancelEditBtn').classList.remove('hidden');
     document.getElementById('appName').value        = app.Name;
     document.getElementById('appDesc').value        = app.Description;
@@ -516,14 +920,14 @@ function cancelEdit() {
     editingAppId=null;
     document.getElementById('formTitle').innerText  = 'เพิ่มแอปพลิเคชันใหม่';
     document.getElementById('submitBtn').innerHTML  = '+ บันทึกขึ้น Firestore';
-    document.getElementById('submitBtn').className  = 'flex-1 bg-pink-400 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition-colors uppercase tracking-wider text-sm shadow-md hover:shadow-lg';
+    document.getElementById('submitBtn').className  = 'flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-sm';
     document.getElementById('cancelEditBtn').classList.add('hidden');
     document.getElementById('addAppForm').reset();
     document.getElementById('iconPreviewWrap').classList.add('hidden');
 }
 
 // ============================================================
-// 🔥 Save / Delete (Firestore)
+// 🔥 Save / Delete
 // ============================================================
 async function saveApp(e) {
     e.preventDefault();
@@ -538,11 +942,11 @@ async function saveApp(e) {
         };
         if (editingAppId) {
             await db.collection(COLLECTION_NAME).doc(editingAppId).update(data);
-            showAlert('success','แก้ไขสำเร็จ! 🎉','อัปเดตข้อมูลใน Firestore เรียบร้อยแล้ว');
+            showAlert('success','แก้ไขสำเร็จ! 🎉','อัปเดตข้อมูลเรียบร้อยแล้ว');
         } else {
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection(COLLECTION_NAME).add(data);
-            showAlert('success','เพิ่มสำเร็จ! 🎉','บันทึกแอปลงใน Firestore เรียบร้อยแล้ว');
+            showAlert('success','เพิ่มสำเร็จ! 🎉','บันทึกแอปเรียบร้อยแล้ว');
         }
         cancelEdit();
     } catch(err) { showAlert('error','เกิดข้อผิดพลาด',err.message); }
@@ -558,7 +962,7 @@ async function deleteApp(id) {
 }
 
 // ============================================================
-// 📊 Excel Template Download
+// 📊 Excel
 // ============================================================
 function downloadTemplate(withSample) {
     const headers = ['Name','Description','Link','Category','IconURL'];
@@ -567,22 +971,15 @@ function downloadTemplate(withSample) {
         ['Figma','ออกแบบ UI/UX ออนไลน์','https://figma.com','Design','https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg'],
         ['Notion','จดบันทึก & จัดการงาน','https://notion.so','Productivity','https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png'],
     ] : [];
-
-    const ws  = XLSX.utils.aoa_to_sheet([headers, ...sample]);
-    const wb  = XLSX.utils.book_new();
-
-    // Style header row (column widths)
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sample]);
+    const wb = XLSX.utils.book_new();
     ws['!cols'] = [{wch:25},{wch:40},{wch:40},{wch:20},{wch:50}];
-
     XLSX.utils.book_append_sheet(wb, ws, 'Apps');
     XLSX.writeFile(wb, withSample ? 'app-hub-template-sample.xlsx' : 'app-hub-template.xlsx');
 }
 
-// ============================================================
-// 📊 Excel Drag & Drop
-// ============================================================
 function onDragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('drag-over'); }
-function onDragLeave()  { document.getElementById('dropZone').classList.remove('drag-over'); }
+function onDragLeave() { document.getElementById('dropZone').classList.remove('drag-over'); }
 function onDrop(e) {
     e.preventDefault();
     document.getElementById('dropZone').classList.remove('drag-over');
@@ -596,10 +993,10 @@ function processExcelFile(file) {
     const reader = new FileReader();
     reader.onload = evt => {
         try {
-            const wb   = XLSX.read(evt.target.result, {type:'binary'});
-            const ws   = wb.Sheets[wb.SheetNames[0]];
-            const raw  = XLSX.utils.sheet_to_json(ws, {defval:''});
-            if (!raw.length) { showAlert('error','ไฟล์ว่างเปล่า','ไม่พบข้อมูลในไฟล์ Excel'); return; }
+            const wb = XLSX.read(evt.target.result, {type:'binary'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const raw = XLSX.utils.sheet_to_json(ws, {defval:''});
+            if (!raw.length) { showAlert('error','ไฟล์ว่าง','ไม่พบข้อมูล'); return; }
             parseAndPreview(raw);
         } catch(e) { showAlert('error','อ่านไฟล์ไม่ได้',e.message); }
     };
@@ -608,93 +1005,68 @@ function processExcelFile(file) {
 
 function parseAndPreview(raw) {
     parsedRows = raw.map((row, i) => {
-        // Normalize keys: lowercase, trim, map to standard keys
         const norm = {};
         Object.keys(row).forEach(k => {
             const key = k.toLowerCase().replace(/\s+/g,'').replace('_','');
             const mapped = COL_MAP[key] || COL_MAP[key.replace('url','URL')];
             if (mapped) norm[mapped] = String(row[k]).trim();
         });
-        const hasName = !!norm.Name;
-        const hasLink = !!norm.Link;
-        const hasCat  = !!norm.Category;
+        const hasName = !!norm.Name, hasLink = !!norm.Link, hasCat = !!norm.Category;
         let status='ok', statusText='✅ พร้อม';
-        if (!hasName)       { status='err';  statusText='❌ ไม่มีชื่อ'; }
-        else if (!hasLink)  { status='warn'; statusText='⚠️ ไม่มี URL'; }
-        else if (!hasCat)   { status='warn'; statusText='⚠️ ไม่มีหมวด'; }
+        if (!hasName) { status='err'; statusText='❌ ไม่มีชื่อ'; }
+        else if (!hasLink) { status='warn'; statusText='⚠️ ไม่มี URL'; }
+        else if (!hasCat) { status='warn'; statusText='⚠️ ไม่มีหมวด'; }
         return { row:i+2, Name:norm.Name||'', Description:norm.Description||'', Link:norm.Link||'', Category:norm.Category||'', IconURL:norm.IconURL||'', status, statusText };
     });
-
-    const ok   = parsedRows.filter(r=>r.status==='ok').length;
-    const warn = parsedRows.filter(r=>r.status==='warn').length;
-    const err  = parsedRows.filter(r=>r.status==='err').length;
-
-    document.getElementById('previewOkCount').textContent   = `${ok} พร้อม`;
-    document.getElementById('previewWarnCount').textContent  = warn ? `${warn} คำเตือน` : '';
-    document.getElementById('previewErrCount').textContent   = err  ? `${err} ข้อผิดพลาด` : '';
-
-    document.getElementById('importPreviewBody').innerHTML = parsedRows.map(r => `
+    const ok=parsedRows.filter(r=>r.status==='ok').length;
+    const warn=parsedRows.filter(r=>r.status==='warn').length;
+    const err=parsedRows.filter(r=>r.status==='err').length;
+    document.getElementById('previewOkCount').textContent=`${ok} พร้อม`;
+    document.getElementById('previewWarnCount').textContent=warn?`${warn} คำเตือน`:'';
+    document.getElementById('previewErrCount').textContent=err?`${err} ข้อผิดพลาด`:'';
+    document.getElementById('importPreviewBody').innerHTML = parsedRows.map(r=>`
         <tr>
             <td class="text-gray-400">${r.row}</td>
             <td class="font-bold text-gray-700">${r.Name||'<span class="text-red-400">-</span>'}</td>
             <td class="text-gray-500">${r.Description||'-'}</td>
             <td class="${r.Link?'text-blue-500':'text-red-400'}">${r.Link||'ไม่มี'}</td>
             <td class="${r.Category?'text-gray-600':'text-orange-400'}">${r.Category||'ไม่มี'}</td>
-            <td class="text-gray-400">${r.IconURL ? '<span class="text-green-500">✓ มี</span>' : '-'}</td>
+            <td class="text-gray-400">${r.IconURL?'<span class="text-green-500">✓</span>':'-'}</td>
             <td class="font-bold ${r.status==='ok'?'row-ok':r.status==='warn'?'row-warn':'row-err'}">${r.statusText}</td>
         </tr>`).join('');
-
     document.getElementById('importPreviewSection').classList.remove('hidden');
 }
 
-// ============================================================
-// 🚀 Import to Firestore
-// ============================================================
 async function importToFirestore() {
-    const skipDup    = document.getElementById('skipDuplicates').checked;
-    const existNames = new Set(allApps.map(a => a.Name.toLowerCase()));
-    const toImport   = parsedRows.filter(r => {
-        if (r.status==='err') return false;
-        if (skipDup && existNames.has(r.Name.toLowerCase())) return false;
+    const skipDup = document.getElementById('skipDuplicates').checked;
+    const existNames = new Set(allApps.map(a=>a.Name.toLowerCase()));
+    const toImport = parsedRows.filter(r=>{
+        if(r.status==='err') return false;
+        if(skipDup && existNames.has(r.Name.toLowerCase())) return false;
         return true;
     });
-
-    if (!toImport.length) { showAlert('error','ไม่มีข้อมูลที่จะ Import','ข้อมูลทั้งหมดมีข้อผิดพลาดหรือซ้ำกับที่มีอยู่แล้ว'); return; }
-
-    const btn = document.getElementById('importBtn');
-    btn.disabled=true; btn.textContent='กำลัง Import...';
-    showSync(`กำลัง Import ${toImport.length} รายการขึ้น Firestore...`);
-
-    try {
-        // Batch write (max 500 per batch)
-        const BATCH_SIZE = 499;
-        for (let i=0; i<toImport.length; i+=BATCH_SIZE) {
-            const chunk = toImport.slice(i, i+BATCH_SIZE);
-            const batch = db.batch();
-            chunk.forEach(r => {
-                const ref  = db.collection(COLLECTION_NAME).doc();
-                batch.set(ref, {
-                    Name:        r.Name,
-                    Description: r.Description,
-                    Link:        r.Link,
-                    Category:    r.Category,
-                    IconURL:     r.IconURL,
-                    createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
-                });
+    if(!toImport.length){showAlert('error','ไม่มีข้อมูล','ข้อมูลทั้งหมดมีข้อผิดพลาดหรือซ้ำ');return;}
+    const btn=document.getElementById('importBtn');
+    btn.disabled=true;btn.textContent='กำลัง Import...';
+    showSync(`กำลัง Import ${toImport.length} รายการ...`);
+    try{
+        const BS=499;
+        for(let i=0;i<toImport.length;i+=BS){
+            const chunk=toImport.slice(i,i+BS);
+            const batch=db.batch();
+            chunk.forEach(r=>{
+                const ref=db.collection(COLLECTION_NAME).doc();
+                batch.set(ref,{Name:r.Name,Description:r.Description,Link:r.Link,Category:r.Category,IconURL:r.IconURL,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
             });
             await batch.commit();
         }
         resetImport();
-        showAlert('success',`Import สำเร็จ! 🎉`,`เพิ่ม ${toImport.length} แอปลงใน Firestore เรียบร้อยแล้ว`);
-    } catch(err) {
-        showAlert('error','Import ไม่สำเร็จ',err.message);
-    } finally {
-        hideSync();
-        btn.disabled=false; btn.innerHTML='🚀 Import ขึ้น Firestore';
-    }
+        showAlert('success',`Import สำเร็จ! 🎉`,`เพิ่ม ${toImport.length} แอปเรียบร้อย`);
+    }catch(err){showAlert('error','Import ไม่สำเร็จ',err.message);}
+    finally{hideSync();btn.disabled=false;btn.innerHTML='🚀 Import ขึ้น Firestore';}
 }
 
-function resetImport() {
+function resetImport(){
     parsedRows=[];
     document.getElementById('excelFileInput').value='';
     document.getElementById('importPreviewSection').classList.add('hidden');
@@ -704,11 +1076,11 @@ function resetImport() {
 // ============================================================
 // Helpers
 // ============================================================
-function showSync(msg='กำลังซิงค์...') { document.getElementById('syncMsg').textContent=msg; document.getElementById('syncOverlay').classList.remove('hidden'); }
-function hideSync() { document.getElementById('syncOverlay').classList.add('hidden'); }
-function closeAlert() { document.getElementById('alertModal').classList.remove('active'); setTimeout(()=>document.getElementById('alertModal').classList.add('hidden'),300); }
-function showAlert(type,title,message) {
-    const modal=document.getElementById('alertModal'), icon=document.getElementById('alertIcon'), ok=type==='success';
+function showSync(msg='กำลังซิงค์...'){document.getElementById('syncMsg').textContent=msg;document.getElementById('syncOverlay').classList.remove('hidden');}
+function hideSync(){document.getElementById('syncOverlay').classList.add('hidden');}
+function closeAlert(){document.getElementById('alertModal').classList.remove('active');setTimeout(()=>document.getElementById('alertModal').classList.add('hidden'),300);}
+function showAlert(type,title,message){
+    const modal=document.getElementById('alertModal'),icon=document.getElementById('alertIcon'),ok=type==='success';
     icon.className=`w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-4 ${ok?'bg-green-100 text-green-500':'bg-red-100 text-red-500'}`;
     icon.innerHTML=ok
         ?`<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`

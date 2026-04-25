@@ -96,7 +96,7 @@
         .app-row:active{transform:scale(.98)}
         .app-row:last-child{border-bottom:none}
 
-        .app-icon-sm{width:60px;height:60px;border-radius:14px;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,#f0f0f5,#e8e8ed);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.08);border:.5px solid rgba(0,0,0,.04);transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
+        .app-icon-sm{width:60px;height:60px;border-radius:14px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.08);border:.5px solid rgba(0,0,0,.04);transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
         .app-row:hover .app-icon-sm,.app-card-lg:hover .app-icon-sm{transform:scale(1.12) rotate(-3deg);box-shadow:0 6px 20px rgba(0,0,0,.12)}
         .app-icon-sm img{width:100%;height:100%;object-fit:cover}
 
@@ -149,18 +149,13 @@
                 <h1 class="text-lg md:text-xl font-extrabold tracking-tight shimmer-text" style="letter-spacing:-.03em">App Store</h1>
             </div>
             <div class="flex items-center gap-3">
-                <div class="relative hidden sm:block anim-right" style="animation-delay:.3s">
-                    <form autocomplete="off" onsubmit="return false" style="margin:0">
-                    <input type="search" id="searchInput" oninput="filterApps()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" role="searchbox" placeholder="ค้นหาแอป..." class="w-56 md:w-72 pl-9 pr-4 py-2 rounded-xl bg-black/5 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500/30 focus:bg-white focus:shadow-lg outline-none transition-all duration-300 border-none">
-                    </form>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                </div>
+
                 <button onclick="openPasswordModal()" class="w-9 h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:rotate-90 active:scale-90" title="Manage">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
         </div>
-        <div class="sm:hidden pb-3"><div class="relative"><input type="search" id="searchInputMobile" oninput="filterAppsMobile()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" role="searchbox" placeholder="ค้นหาแอป..." class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-black/5 text-sm placeholder-gray-400 focus:ring-2 focus:ring-blue-500/30 focus:bg-white outline-none transition-all duration-300 border-none"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div></div>
+
     </div>
 </nav>
 
@@ -324,10 +319,10 @@ function makeFeatured(app,i){
 function renderTrending(){
     const tr=trendApps();const sec=document.getElementById('trendingSection'),list=document.getElementById('trendingList');
     if(tr.length<2){sec.classList.add('hidden');return;}sec.classList.remove('hidden');
-    list.innerHTML=tr.map((app,i)=>{const lk=normLink(app.Link),fb=`https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=f0f0f5&color=1d1d1f&size=64&bold=true`,cnt=getCC(app.id),rc=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+    list.innerHTML=tr.map((app,i)=>{const lk=normLink(app.Link),cnt=getCC(app.id),rc=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
     return `<a href="javascript:void(0)" onclick="onAppClick(event,'${app.id}','${esc(lk)}')" class="app-row anim-left" style="animation-delay:${i*100}ms;position:relative;overflow:hidden">
         <span class="rank-badge ${rc}" ${i===0?'style="animation:bounceIn .6s .3s both"':''}>${i+1}</span>
-        <div class="app-icon-sm">${app.IconURL?`<img src="${app.IconURL}" onerror="this.src='${fb}'">`:`<span style="font-size:22px;font-weight:800;color:var(--t3)">${app.Name.charAt(0)}</span>`}</div>
+        <div class="app-icon-sm">${app.IconURL?`<img src="${app.IconURL}" style="width:100%;height:100%;object-fit:cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML=iconElFallback('${app.id}','${esc(app.Name)}','sm')">`:`${iconElFallback(app.id,app.Name,'sm')}`}</div>
         <div style="flex:1;min-width:0"><p style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${app.Name}</p><p style="font-size:12px;color:var(--t3);font-weight:500">${app.Category||'App'}</p></div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">${cnt>2?`<span class="trending-fire"><span class="heartbeat">🔥</span> ${cnt}</span>`:`<span class="usage-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>${cnt}</span>`}<span class="get-btn">เปิด</span></div></a>`;}).join('');
 }
@@ -339,10 +334,10 @@ function renderApps(apps){
     if(!apps.length){grid.innerHTML='';empty.classList.remove('hidden');return;}empty.classList.add('hidden');
     const sorted=[...apps].sort((a,b)=>{const d=getCC(b.id)-getCC(a.id);return d||a.Name.localeCompare(b.Name,'th');});
     document.getElementById('appCountLabel').textContent=`${sorted.length} แอป`;
-    grid.innerHTML=sorted.map((app,i)=>{const lk=normLink(app.Link),fb=`https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=f0f0f5&color=1d1d1f&size=128&bold=true`,cnt=getCC(app.id);
+    grid.innerHTML=sorted.map((app,i)=>{const lk=normLink(app.Link),cnt=getCC(app.id);
     return `<a href="javascript:void(0)" onclick="onAppClick(event,'${app.id}','${esc(lk)}')" class="app-card-lg glow-ring anim-up" style="animation-delay:${i*80}ms;position:relative;overflow:hidden">
         <div style="padding:20px 20px 0"><div style="display:flex;align-items:flex-start;gap:14px">
-            <div class="app-icon-sm" style="width:64px;height:64px;border-radius:16px">${app.IconURL?`<img src="${app.IconURL}" onerror="this.src='${fb}'">`:`<span style="font-size:24px;font-weight:800;color:var(--t3)">${app.Name.charAt(0)}</span>`}</div>
+            <div class="app-icon-sm" style="width:64px;height:64px;border-radius:16px">${app.IconURL?`<img src="${app.IconURL}" style="width:100%;height:100%;object-fit:cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML=iconElFallback('${app.id}','${esc(app.Name)}','lg')">`:`${iconElFallback(app.id,app.Name,'lg')}`}</div>
             <div style="flex:1;min-width:0"><h3 style="font-size:16px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${app.Name}</h3><p style="font-size:12px;color:var(--t3);font-weight:500;margin-bottom:4px">${app.Category||'App'}</p>
             ${cnt>0?`<span class="usage-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> ใช้ ${cnt} ครั้ง</span>`:''}</div>
             <span class="get-btn" style="margin-top:4px">เปิด</span></div></div>
@@ -350,8 +345,8 @@ function renderApps(apps){
     setTimeout(()=>document.querySelectorAll('.app-card-lg').forEach(el=>{if(!el.classList.contains('visible'))sObs.observe(el);}),50);
 }
 
-function filterApps(){const t=(document.getElementById('searchInput').value||document.getElementById('searchInputMobile')?.value||'').toLowerCase();renderApps(allApps.filter(a=>(a.Name+a.Description+a.Category).toLowerCase().includes(t)&&(activeCategory==='ทั้งหมด'||a.Category===activeCategory)));}
-function filterAppsMobile(){document.getElementById('searchInput').value=document.getElementById('searchInputMobile').value;filterApps();}
+function filterApps(){renderApps(allApps.filter(a=>(activeCategory==='ทั้งหมด'||a.Category===activeCategory)));}
+
 function filterByCategory(c){activeCategory=c;refreshUI();}
 
 function onAppClick(e,id,lk){
@@ -365,11 +360,15 @@ function onAppClick(e,id,lk){
 function normLink(l){l=(l||'').trim()||'#';if(l!=='#'&&!l.startsWith('http')&&!l.startsWith('mailto:'))l='https://'+l;return l;}
 function esc(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 function hc(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h;}
+function iconGradient(id){const palettes=[['#ffb3c6','#ff4d6d','#fff'],['#a9d6e5','#1d7aad','#fff'],['#b7e4c7','#2d6a4f','#fff'],['#ffd6a5','#d4622a','#fff'],['#d0b4f7','#7b2fff','#fff'],['#fef08a','#c47d00','#333'],['#fca5a5','#b91c1c','#fff'],['#99f6e4','#0f766e','#fff'],['#e9d5ff','#7c3aed','#fff'],['#fbcfe8','#be185d','#fff'],['#bae6fd','#0369a1','#fff'],['#bbf7d0','#166534','#fff']];const i=Math.abs(hc(id))%palettes.length;return palettes[i];}
+function iconBg(id){const[bg1,bg2,tc]=iconGradient(id);return{grad:`linear-gradient(135deg,${bg1},${bg2})`,tc};}
+function iconEl(app,size='sm'){const fb=`https://ui-avatars.com/api/?name=${encodeURIComponent(app.Name)}&background=f0f0f5&color=1d1d1f&size=128&bold=true`;if(app.IconURL)return`<img src="${app.IconURL}" onerror="this.onerror=null;this.style.display='none';this.parentElement.innerHTML=iconElFallback('${app.id}','${esc(app.Name)}','${size}')">`;return iconElFallback(app.id,app.Name,size);}
+function iconElFallback(id,name,size){const{grad,tc}=iconBg(id);const fs=size==='xs'?'11px':size==='sm'?'22px':'26px';const fw=size==='xs'?'700':'800';return`<div style="width:100%;height:100%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:${fw};color:${tc};letter-spacing:-.02em;text-shadow:0 1px 3px rgba(0,0,0,.15)">${(name||'?').charAt(0).toUpperCase()}</div>`;}
 function updateDatalist(){document.getElementById('categoryList').innerHTML=[...new Set(allApps.map(a=>a.Category).filter(Boolean))].map(c=>`<option value="${c}">`).join('');}
 
 // ===== ADMIN =====
 function renderAdminList(){const list=document.getElementById('adminAppList'),t=(document.getElementById('adminSearch')?.value||'').toLowerCase(),sh=[...allApps].reverse().filter(a=>!t||(a.Name+a.Category).toLowerCase().includes(t));document.getElementById('appCount').innerText=allApps.length;document.getElementById('appCountTab').innerText=allApps.length;if(!sh.length){list.innerHTML='<p class="text-center text-sm text-gray-400 py-8 border border-dashed rounded-xl">ไม่พบข้อมูล</p>';return;}
-list.innerHTML=sh.map((app,i)=>{const cnt=getCC(app.id);return`<div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-sm transition-all hover:scale-[1.01] anim-up" style="animation-delay:${i*40}ms"><div class="flex items-center gap-3 overflow-hidden"><div class="w-9 h-9 rounded-lg bg-white shrink-0 overflow-hidden border border-gray-200">${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:`<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">${app.Name.charAt(0)}</div>`}</div><div class="truncate"><p class="font-bold text-sm text-gray-800 truncate">${app.Name}</p><p class="text-[10px] text-gray-500">${app.Category}${cnt>0?` · ⚡${cnt}`:''}</p></div></div><div class="flex gap-1 shrink-0"><button onclick="editApp('${app.id}')" class="text-blue-400 hover:bg-blue-50 p-1.5 rounded-lg hover:scale-110 active:scale-90 transition-all"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-1.5 rounded-lg hover:scale-110 active:scale-90 transition-all"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></button></div></div>`;}).join('');}
+list.innerHTML=sh.map((app,i)=>{const cnt=getCC(app.id);return`<div class="bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between gap-3 hover:shadow-sm transition-all hover:scale-[1.01] anim-up" style="animation-delay:${i*40}ms"><div class="flex items-center gap-3 overflow-hidden"><div class="w-9 h-9 rounded-lg bg-white shrink-0 overflow-hidden border border-gray-200">${app.IconURL?`<img src="${app.IconURL}" class="w-full h-full object-cover" onerror="this.style.display='none'">`:`${iconElFallback(app.id,app.Name,'xs')}`}</div><div class="truncate"><p class="font-bold text-sm text-gray-800 truncate">${app.Name}</p><p class="text-[10px] text-gray-500">${app.Category}${cnt>0?` · ⚡${cnt}`:''}</p></div></div><div class="flex gap-1 shrink-0"><button onclick="editApp('${app.id}')" class="text-blue-400 hover:bg-blue-50 p-1.5 rounded-lg hover:scale-110 active:scale-90 transition-all"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteApp('${app.id}')" class="text-red-400 hover:bg-red-50 p-1.5 rounded-lg hover:scale-110 active:scale-90 transition-all"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></button></div></div>`;}).join('');}
 
 function switchTab(t){['manual','import','list'].forEach(n=>{document.getElementById('panel'+n.charAt(0).toUpperCase()+n.slice(1)).classList.add('hidden');document.getElementById('tab'+n.charAt(0).toUpperCase()+n.slice(1)).classList.remove('active');});document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('hidden');document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');if(t==='list')renderAdminList();}
 

@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Apps Portal (project: app-hup)
+// Deploy with:  firebase deploy --only firestore:rules
+//
+// History: until 2026-09-20 the live rule here was `allow write: if true`, which
+// let anyone on the internet rewrite or delete the app catalogue with a single
+// unauthenticated HTTP request. Do not loosen the write rule again.
+//
+// NOTE: `request.auth != null` would NOT be enough. Email/Password sign-up is open
+// to anyone holding the (public) web API key that ships in index.html, so a stranger
+// could register an account and satisfy it. Writes must stay pinned to the admin UID.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The one account allowed to modify the catalogue.
+    // biiigooo76@gmail.com — Firebase Auth > Users. Update here if the account changes.
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.uid == 'taPC3CxoJ9WgR24aReWkAhP17yh1';
+    }
+
+    match /apps/{doc} {
+      // Public staff directory: the portal reads this without signing in.
+      // Keep this open or app.lamsangstore.com breaks for everyone.
+      allow read: if true;
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Everything else is denied by default.
+  }
+}
